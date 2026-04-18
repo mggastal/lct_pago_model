@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="pageTab">Dashboard Lançamento</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root{
+  --bg:#0a0d14;--surface:#111520;--surface2:#181d2a;--surface3:#1e2535;
+  --border:rgba(255,255,255,0.07);--text:#f0f4ff;--muted:#8b95a9;--muted2:#4a5568;
+  --accent:#e11d48;--sh:0 2px 12px rgba(0,0,0,.4);--r:14px;
+}
+[data-theme="light"]{
+  --bg:#f0f2f7;--surface:#fff;--surface2:#f7f8fc;--surface3:#eef0f5;
+  --border:rgba(0,0,0,0.07);--text:#0f1523;--muted:#6b7280;--muted2:#9ca3af;
+  --sh:0 1px 6px rgba(0,0,0,.08);
+}
+[data-theme="light"] .sb{background:#fff;border-right:1px solid var(--border);}
+[data-theme="light"] .sb-item{color:var(--muted);}
+[data-theme="light"] .sb-item.active{background:var(--surface2);color:var(--text);}
+[data-theme="light"] .sb-logo-name{color:var(--text);}
+[data-theme="light"] .tc tbody tr.camp-row td{background:var(--surface2);}
+[data-theme="light"] .pb.active{background:var(--surface);color:var(--text);}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;overflow-x:hidden;}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;align-items:start;}
+
+/* ── SIDEBAR ── */
+.sb{background:#0a0d14;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;border-right:1px solid rgba(255,255,255,0.05);}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.sb-logo-box{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;}
+.sb-logo-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#fff;line-height:1.2;}
+.sb-logo-sub{font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.5px;}
+.sb-nav{padding:12px 10px;flex:1;}
+.sb-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,.4);font-size:12px;font-weight:500;transition:all .15s;margin-bottom:2px;text-decoration:none;border:none;background:none;width:100%;text-align:left;}
+.sb-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8);}
+.sb-item.active{background:rgba(255,255,255,.1);color:#fff;}
+.sb-item .ico{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+.sb-lct-badge{margin:0 18px 12px;padding:6px 10px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);}
+.sb-lct-label{font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
+.sb-lct-val{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#fff;}
+.sb-footer{padding:12px 18px;border-top:1px solid rgba(255,255,255,.05);}
+.sb-footer-txt{font-size:10px;color:rgba(255,255,255,.25);}
+
+/* ── MAIN ── */
+.main{display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--sh);gap:10px;flex-wrap:wrap;}
+.topbar-l{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.page-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.live-badge{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+.pulse{width:5px;height:5px;border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.period-bar{display:flex;gap:3px;background:var(--bg);padding:3px;border-radius:9px;}
+.pb{padding:5px 11px;border-radius:7px;border:none;background:transparent;cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);transition:all .15s;font-family:'DM Sans',sans-serif;}
+.pb.active{background:var(--surface);color:var(--text);box-shadow:var(--sh);}
+.theme-btn{padding:5px 11px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;}
+
+/* ── CONTENT ── */
+.content{padding:20px 24px;flex:1;overflow-x:hidden;}
+.page-section{display:none;}
+.page-section.active{display:block;}
+
+/* ── KPI STRIP ── */
+.kpi-strip{display:grid;gap:10px;margin-bottom:16px;}
+.kpi-strip-5{grid-template-columns:repeat(5,1fr);}
+.kpi-strip-4{grid-template-columns:repeat(4,1fr);}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,#334155);}
+.kpi-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin-bottom:5px;}
+.kpi-val{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;line-height:1;color:var(--kc,var(--text));margin-bottom:2px;}
+.kpi-sub{font-size:10px;color:var(--muted);}
+
+/* ── FUNIL VISUAL ── */
+.funnel-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;margin-bottom:16px;}
+.funnel-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:16px;}
+.funnel-steps{display:flex;flex-direction:column;align-items:center;gap:0;}
+.funnel-step{width:100%;max-width:600px;display:flex;align-items:center;gap:12px;}
+.funnel-bar-wrap{flex:1;position:relative;}
+.funnel-bar{border-radius:6px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;transition:width .3s;position:relative;}
+.funnel-bar-label{font-size:12px;font-weight:600;color:#fff;}
+.funnel-bar-val{font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:#fff;}
+.funnel-arrow{text-align:center;color:var(--muted2);font-size:11px;padding:3px 0;display:flex;flex-direction:column;align-items:center;max-width:600px;width:100%;}
+.funnel-arrow-rate{font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--muted);}
+.funnel-arrow-icon{font-size:16px;color:var(--muted2);line-height:1;}
+
+/* ── CHARTS ── */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh);min-width:0;overflow:hidden;}
+.cc-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:2px;}
+.cc-sub{font-size:11px;color:var(--muted);margin-bottom:12px;}
+.cw{position:relative;width:100%;overflow:hidden;max-width:100%;}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;}
+.mb12{margin-bottom:12px;}
+.mb16{margin-bottom:16px;}
+
+/* ── SECTION ── */
+.sec-hd{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.sec-hd span{font-size:11px;font-weight:400;color:var(--muted);font-family:'DM Sans',sans-serif;}
+.section{margin-bottom:20px;}
+
+/* ── TABELAS ── */
+.tc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);overflow-x:auto;}
+.tc table{width:100%;border-collapse:collapse;min-width:700px;}
+.tc thead th{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;padding:8px 12px;text-align:left;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;}
+.tc thead th.num{text-align:right;}
+.tc tbody td{padding:7px 12px;font-size:12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.tc tbody tr:last-child td{border-bottom:none;}
+.tc tbody tr:hover td{background:var(--surface2);}
+.tc tbody tr.camp-row td{background:var(--surface2);font-weight:700;}
+.num{text-align:right;font-family:'DM Mono',monospace;font-size:11px;}
+.cg{color:#10b981;font-weight:700;}.cw2{color:#f59e0b;font-weight:700;}.cr{color:#ef4444;font-weight:700;}.cn{color:var(--muted);}
+
+/* ── CRIATIVOS ── */
+.ads-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;}
+.ad-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--sh);transition:transform .15s;}
+.ad-card:hover{transform:translateY(-2px);}
+.ad-img-wrap{width:100%;aspect-ratio:4/5;background:var(--surface2);overflow:hidden;}
+.ad-img-wrap img{width:100%;height:100%;object-fit:cover;}
+.ad-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--muted2);}
+.ad-info{padding:8px 10px;}
+.ad-name{font-size:10px;font-weight:600;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3;color:var(--muted);}
+.ad-stats{display:grid;grid-template-columns:1fr 1fr;gap:3px;}
+.as-l{font-size:8px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;}
+.as-v{font-size:11px;font-weight:700;font-family:'DM Mono',monospace;}
+
+/* ── PESQUISA ── */
+.pizza-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:16px;}
+.pizza-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.pizza-q{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:12px;line-height:1.4;}
+.pizza-chart-wrap{height:180px;position:relative;}
+.pizza-legend{margin-top:8px;display:flex;flex-direction:column;gap:4px;}
+.pizza-leg-item{display:flex;align-items:center;gap:6px;font-size:10px;}
+.pizza-leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pizza-leg-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);}
+.pizza-leg-pct{font-family:'DM Mono',monospace;font-weight:700;font-size:10px;}
+
+/* ── ORIGEM FILTER ── */
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.filter-btn{padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);transition:all .15s;font-family:'DM Sans',sans-serif;}
+.filter-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* ── INSIGHTS ── */
+.insights-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:16px;}
+.insight-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;gap:12px;align-items:flex-start;}
+.insight-icon{font-size:20px;flex-shrink:0;margin-top:2px;}
+.insight-title{font-size:11px;font-weight:700;margin-bottom:3px;}
+.insight-txt{font-size:11px;color:var(--muted);line-height:1.4;}
+
+/* ── MOBILE ── */
+.mob-menu{display:none;width:34px;height:34px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:17px;align-items:center;justify-content:center;flex-shrink:0;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;}
+.overlay.open{display:block;}
+@media(max-width:768px){
+  .app{grid-template-columns:1fr;}
+  .sb{display:none;position:fixed;top:0;left:0;width:240px;height:100vh;z-index:200;}
+  .sb.open{display:flex;}
+  .mob-menu{display:flex;}
+  .content{padding:12px;overflow-x:hidden;}
+  .main{overflow-x:hidden;max-width:100vw;}
+  .page-section{max-width:100%;overflow-x:hidden;}
+  .kpi-strip-5,.kpi-strip-4{grid-template-columns:repeat(2,1fr);}
+  .charts-2,.charts-3{grid-template-columns:1fr;}
+  .pizza-grid{grid-template-columns:1fr;}
+  .tc{overflow-x:auto;}
+  .funnel-step{max-width:100%;}
+}
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay" onclick="closeSb()"></div>
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sb" id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-box" id="logoBox">C</div>
+    <div>
+      <div class="sb-logo-name" id="sbNome">Dashboard</div>
+      <div class="sb-logo-sub">Lançamento</div>
+    </div>
+  </div>
+  <div class="sb-nav">
+    <button class="sb-item active" onclick="showPage('overview',this)"><span class="ico">📊</span>Overview</button>
+    <button class="sb-item" onclick="showPage('meta',this)"><span class="ico">🎯</span>Meta Ads</button>
+    <button class="sb-item" onclick="showPage('diario',this)"><span class="ico">📈</span>Métricas Diárias</button>
+    <button class="sb-item" onclick="showPage('tabelas',this)"><span class="ico">📋</span>Tabelas</button>
+    <button class="sb-item" onclick="showPage('pesquisa',this)"><span class="ico">🔍</span>Pesquisa</button>
+  </div>
+  <div class="sb-lct-badge">
+    <div class="sb-lct-label">Lançamento</div>
+    <div class="sb-lct-val" id="sbLct">VSE02</div>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-footer-txt">Atualizado --/--/---- · via planilha</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-l">
+      <button class="mob-menu" onclick="toggleSb()">☰</button>
+      <div class="page-title" id="pageTitle">Overview</div>
+      <div class="live-badge" id="liveBadge"><div class="pulse" id="livePulse"></div><span id="liveTxt">Carregando...</span></div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <div class="period-bar" id="lctFilterBar" style="display:none">
+        <button class="pb active" id="btnLctOn"  onclick="setLctFilter(true,this)">
+          <span id="lctCodLabel">VSE02</span>
+        </button>
+        <button class="pb" id="btnLctOff" onclick="setLctFilter(false,this)">Tudo</button>
+      </div>
+      <button class="theme-btn" onclick="toggleTheme()"><span id="themeIcon">☀️</span><span id="themeLabel">Claro</span></button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ OVERVIEW ══ -->
+    <div class="page-section active" id="page-overview">
+      <div class="kpi-strip kpi-strip-5" id="ovKpis"></div>
+      <div class="kpi-strip" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:16px;" id="ovFunilKpis"></div>
+
+      <!-- Funil visual -->
+      <div class="funnel-wrap mb16">
+        <div class="funnel-title">🔽 Funil de Conversão — Meta Ads</div>
+        <div class="funnel-steps" id="funnelVis"></div>
+      </div>
+
+      <!-- Gráfico investimento x faturamento -->
+      <div class="charts-2 mb16">
+        <div class="chart-card">
+          <div class="cc-title">Faturamento vs Investimento</div>
+          <div class="cc-sub">Hotmart (barras) · Invest. Meta (linha)</div>
+          <div class="cw" style="height:200px"><canvas id="chOvFat"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-title">Vendas por Origem</div>
+          <div class="cc-sub">Tráfego Pago vs Orgânico (Hotmart)</div>
+          <div class="cw" style="height:200px"><canvas id="chOvOrigem"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Insights automáticos -->
+      <div class="sec-hd">💡 Insights Automáticos</div>
+      <div class="insights-grid" id="insightsGrid"></div>
+    </div>
+
+    <!-- ══ META ADS ══ -->
+    <div class="page-section" id="page-meta">
+      <div class="kpi-strip kpi-strip-5 mb16" id="metaKpis"></div>
+
+      <div class="funnel-wrap mb16">
+        <div class="funnel-title">🔽 Funil Completo — Meta Ads</div>
+        <div class="funnel-steps" id="funnelMeta"></div>
+      </div>
+
+      <div class="charts-2 mb16">
+        <div class="chart-card">
+          <div class="cc-title">Investimento & Receita Diária</div>
+          <div class="cc-sub">Invest. (barras) · Receita Meta (linha)</div>
+          <div class="cw" style="height:190px"><canvas id="chMetaRev"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-title">ROAS Diário</div>
+          <div class="cc-sub">Retorno sobre investimento (Meta)</div>
+          <div class="cw" style="height:190px"><canvas id="chMetaRoas"></canvas></div>
+        </div>
+      </div>
+
+      <div class="charts-2 mb16">
+        <div class="chart-card">
+          <div class="cc-title">CTR & Connect Rate (%)</div>
+          <div class="cc-sub">CTR (azul) · Connect Rate (verde)</div>
+          <div class="cw" style="height:180px"><canvas id="chMetaCTR"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-title">Tx. Init Checkout & Tx. Checkout (%)</div>
+          <div class="cc-sub">Tx IC (laranja) · Tx Checkout (roxo)</div>
+          <div class="cw" style="height:180px"><canvas id="chMetaTx"></canvas></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-hd">🎨 Criativos <span>— todos os períodos</span></div>
+        <div class="ads-grid" id="adsGrid"></div>
+      </div>
+    </div>
+
+    <!-- ══ MÉTRICAS DIÁRIAS ══ -->
+    <div class="page-section" id="page-diario">
+      <div class="chart-card mb12">
+        <div class="cc-title">CPM & Impressões Diárias</div>
+        <div class="cc-sub">CPM (linha) · Impressões (barras)</div>
+        <div class="cw" style="height:200px"><canvas id="chDCPM"></canvas></div>
+      </div>
+      <div class="chart-card mb12">
+        <div class="cc-title">CTR Diário (%)</div>
+        <div class="cc-sub">Impressões → Cliques nos links</div>
+        <div class="cw" style="height:160px"><canvas id="chDCTR"></canvas></div>
+      </div>
+      <div class="chart-card mb12">
+        <div class="cc-title">Connect Rate Diário (%)</div>
+        <div class="cc-sub">Cliques → Page Views</div>
+        <div class="cw" style="height:160px"><canvas id="chDCR"></canvas></div>
+      </div>
+      <div class="chart-card mb12">
+        <div class="cc-title">Taxa Init Checkout Diário (%)</div>
+        <div class="cc-sub">Page View → Init Checkout</div>
+        <div class="cw" style="height:160px"><canvas id="chDIC"></canvas></div>
+      </div>
+      <div class="chart-card mb12">
+        <div class="cc-title">Taxa Checkout Diário (%) & Vendas</div>
+        <div class="cc-sub">Init Checkout → Purchase (linha) · Vendas (barras)</div>
+        <div class="cw" style="height:190px"><canvas id="chDCK"></canvas></div>
+      </div>
+      <div class="chart-card mb12">
+        <div class="cc-title">Taxa de Conversão Diária (%) </div>
+        <div class="cc-sub">Page View → Purchase</div>
+        <div class="cw" style="height:160px"><canvas id="chDCV"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ══ TABELAS ══ -->
+    <div class="page-section" id="page-tabelas">
+      <div class="section">
+        <div class="sec-hd">📢 Por Campanha</div>
+        <div class="tc" id="tCamps"></div>
+      </div>
+      <div class="section">
+        <div class="sec-hd">🎯 Por Conjunto de Anúncios</div>
+        <div class="tc" id="tAdsets"></div>
+      </div>
+      <div class="section">
+        <div class="sec-hd">💰 Vendas por Origem (Hotmart)</div>
+        <div class="tc" id="tOrigem"></div>
+      </div>
+    </div>
+
+    <!-- ══ PESQUISA ══ -->
+    <div class="page-section" id="page-pesquisa">
+      <div class="sec-hd">🔍 Filtrar por Origem <span id="pesTotal"></span></div>
+      <div class="filter-bar" id="pesFilter"></div>
+      <div class="pizza-grid" id="pizzaGrid"></div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+</div><!-- /app -->
+
+<script>
+Chart.register(ChartDataLabels);
+
+// ═══ DADOS (injetados pelo gerador) ═══
+const META_KPIS   = null;
+const META_DAILY  = null;
+const META_CAMPS  = null;
+const META_ADSETS = null;
+const META_ADS    = null;
+const META_KPIS_ALL   = null;
+const META_DAILY_ALL  = null;
+const META_CAMPS_ALL  = null;
+const META_ADSETS_ALL = null;
+const META_ADS_ALL    = null;
+const HOT_KPIS    = null;
+const HOT_DAILY   = null;
+const HOT_ORIGIN  = null;
+const PESQUISA    = null;
+
+// ═══ CONFIG (injetada pelo gerador) ═══
+const LANCAMENTO_COD = 'VSE02';
+const NOME_CLIENTE   = 'Cliente';
+const LOGO_LETRA     = 'C';
+const COR_ACENTO     = '#e11d48';
+const CPA_BOM        = 50;
+const CPA_MEDIO      = 80;
+const ROAS_BOM       = 3.0;
+const ROAS_MEDIO     = 1.5;
+
+// ═══ FILTRO LANÇAMENTO ═══
+let filtroLct = true; // true = filtrado | false = tudo
+
+function getMetaKpis()   { return filtroLct ? META_KPIS   : (META_KPIS_ALL   || META_KPIS);   }
+function getMetaDaily()  { return filtroLct ? META_DAILY  : (META_DAILY_ALL  || META_DAILY);  }
+function getMetaCamps()  { return filtroLct ? META_CAMPS  : (META_CAMPS_ALL  || META_CAMPS);  }
+function getMetaAdsets() { return filtroLct ? META_ADSETS : (META_ADSETS_ALL || META_ADSETS); }
+function getMetaAds()    { return filtroLct ? META_ADS    : (META_ADS_ALL    || META_ADS);    }
+
+function setLctFilter(on, btn){
+  filtroLct = on;
+  document.querySelectorAll('#lctFilterBar .pb').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Rerender página ativa
+  const active = document.querySelector('.page-section.active')?.id?.replace('page-','');
+  if(active==='overview') renderOverview();
+  if(active==='meta')     renderMeta();
+  if(active==='diario')   renderDiario();
+  if(active==='tabelas')  renderTabelas();
+}
+
+// ═══ UTILS ═══
+const fR  = v => (v==null||isNaN(v)) ? '—' : 'R$'+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fRk = v => !v||v===0 ? '—' : v>=1000 ? 'R$'+(v/1000).toFixed(1)+'k' : fR(v);
+const fN  = v => v==null ? '—' : Number(v).toLocaleString('pt-BR');
+const fP  = v => v==null ? '—' : Number(v).toFixed(2)+'%';
+const fX  = v => v==null ? '—' : Number(v).toFixed(2)+'x';
+
+function cpaCls(v){ if(!v) return 'cn'; if(v<=CPA_BOM) return 'cg'; if(v<=CPA_MEDIO) return 'cw2'; return 'cr'; }
+function roasCls(v){ if(!v) return 'cn'; if(v>=ROAS_BOM) return 'cg'; if(v>=ROAS_MEDIO) return 'cw2'; return 'cr'; }
+
+const CH = {};
+function dc(id){ if(CH[id]){ CH[id].destroy(); delete CH[id]; } }
+const TXT = ()=>document.documentElement.getAttribute('data-theme')==='dark'?'#8b95a9':'#6b7280';
+const GRID= ()=>document.documentElement.getAttribute('data-theme')==='dark'?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.05)';
+const bf  = {family:"'DM Sans',sans-serif",size:10};
+function bo(extra={}){
+  return {
+    responsive:true,maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{labels:{color:TXT(),font:bf,boxWidth:9,padding:8}},
+      tooltip:{backgroundColor:document.documentElement.getAttribute('data-theme')==='dark'?'#1a2236':'#0f1523',borderColor:'rgba(255,255,255,.08)',borderWidth:1,titleFont:{size:10},bodyFont:{size:10}},
+      datalabels:{display:false}
+    },
+    scales:{
+      x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
+      y:{ticks:{color:TXT(),font:bf},grid:{color:GRID()}}
+    },
+    ...extra
+  };
+}
+
+// FUNIL COLORS
+const FUNIL_COLORS = ['#6366f1','#3b82f6','#0ea5e9','#10b981','#f59e0b'];
+const FUNIL_STEPS = [
+  {key:'impressions', label:'Impressões',       icon:'👁'},
+  {key:'link_clicks', label:'Link Clicks',      icon:'🖱'},
+  {key:'page_view',   label:'Page Views',       icon:'📄'},
+  {key:'init_checkout',label:'Init Checkout',   icon:'🛒'},
+  {key:'purchase',    label:'Compras',          icon:'💳'},
+];
+const FUNIL_RATES = [
+  {label:'CTR', key:'ctr'},
+  {label:'Connect Rate', key:'connect_rate'},
+  {label:'Tx. Init Checkout', key:'tx_ic'},
+  {label:'Taxa Checkout', key:'tx_checkout'},
+];
+
+function buildFunnel(containerId, kpis){
+  const el = document.getElementById(containerId);
+  if(!el || !kpis) return;
+  const maxVal = kpis.impressions || 1;
+  let html = '';
+  FUNIL_STEPS.forEach((step,i)=>{
+    const val = kpis[step.key] || 0;
+    const pct = Math.max(30, Math.round(val/maxVal*100));
+    const col = FUNIL_COLORS[i];
+    html += `<div class="funnel-step">
+      <div class="funnel-bar-wrap">
+        <div class="funnel-bar" style="background:${col};width:${pct}%;margin:0 auto;">
+          <span class="funnel-bar-label">${step.icon} ${step.label}</span>
+          <span class="funnel-bar-val">${fN(val)}</span>
+        </div>
+      </div>
+    </div>`;
+    if(i < FUNIL_RATES.length){
+      const rate = kpis[FUNIL_RATES[i].key];
+      html += `<div class="funnel-arrow" style="max-width:${pct}%;margin:0 auto;">
+        <div class="funnel-arrow-icon">↓</div>
+        <div class="funnel-arrow-rate">${FUNIL_RATES[i].label}: ${fP(rate)}</div>
+      </div>`;
+    }
+  });
+  el.innerHTML = html;
+}
+
+// ═══ OVERVIEW ═══
+function renderOverview(){
+  if(!getMetaKpis() || !HOT_KPIS) return;
+  const mk = getMetaKpis(), hk = HOT_KPIS;
+
+  // KPIs principais
+  document.getElementById('ovKpis').innerHTML = `
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Investimento</div><div class="kpi-val" style="font-size:16px">${fRk(mk.spend)}</div><div class="kpi-sub">Meta Ads</div></div>
+    <div class="kpi" style="--kc:#10b981"><div class="kpi-lbl">Faturamento</div><div class="kpi-val" style="font-size:16px;color:#10b981">${fRk(hk.total)}</div><div class="kpi-sub">Hotmart</div></div>
+    <div class="kpi" style="--kc:${roasCls(mk.roas)==='cg'?'#10b981':roasCls(mk.roas)==='cw2'?'#f59e0b':'#ef4444'}">
+      <div class="kpi-lbl">ROAS Meta</div>
+      <div class="kpi-val ${roasCls(mk.roas)}">${fX(mk.roas)}</div>
+      <div class="kpi-sub">Receita / Invest.</div>
+    </div>
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas</div><div class="kpi-val">${fN(hk.qtd)}</div><div class="kpi-sub">Hotmart confirmadas</div></div>
+    <div class="kpi" style="--kc:${cpaCls(mk.cpa)==='cg'?'#10b981':cpaCls(mk.cpa)==='cw2'?'#f59e0b':'#ef4444'}">
+      <div class="kpi-lbl">CPA</div>
+      <div class="kpi-val ${cpaCls(mk.cpa)}">${fR(mk.cpa)}</div>
+      <div class="kpi-sub">Custo por venda</div>
+    </div>`;
+
+  document.getElementById('ovFunilKpis').innerHTML = `
+    <div class="kpi" style="--kc:#6366f1"><div class="kpi-lbl">CTR</div><div class="kpi-val">${fP(mk.ctr)}</div><div class="kpi-sub">Impr → Link Click</div></div>
+    <div class="kpi" style="--kc:#3b82f6"><div class="kpi-lbl">Connect Rate</div><div class="kpi-val">${fP(mk.connect_rate)}</div><div class="kpi-sub">Click → Page View</div></div>
+    <div class="kpi" style="--kc:#0ea5e9"><div class="kpi-lbl">Tx. Init Checkout</div><div class="kpi-val">${fP(mk.tx_ic)}</div><div class="kpi-sub">PV → Checkout</div></div>
+    <div class="kpi" style="--kc:#10b981"><div class="kpi-lbl">Taxa Checkout</div><div class="kpi-val">${fP(mk.tx_checkout)}</div><div class="kpi-sub">IC → Compra</div></div>
+    <div class="kpi" style="--kc:#f59e0b"><div class="kpi-lbl">Taxa de Conversão</div><div class="kpi-val">${fP(mk.tx_conv)}</div><div class="kpi-sub">PV → Compra</div></div>`;
+
+  // Esperar para garantir largura
+  setTimeout(()=> buildFunnel('funnelVis', mk), 50);
+
+  // Gráfico fat x invest
+  if(getMetaDaily() && HOT_DAILY){
+    // Alinhar datas
+    const days = getMetaDaily().days;
+    dc('chOvFat');
+    CH['chOvFat'] = new Chart(document.getElementById('chOvFat'),{
+      data:{labels:days,datasets:[
+        {label:'Faturamento',data:HOT_DAILY.valor,backgroundColor:'rgba(16,185,129,.7)',borderRadius:3,type:'bar'},
+        {label:'Invest. Meta',data:getMetaDaily().spend,borderColor:'#e11d48',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line'},
+      ]},
+      options:{...bo(),scales:{
+        x:{ticks:{color:TXT(),font:bf,maxTicksLimit:12},grid:{color:GRID()}},
+        y:{ticks:{color:TXT(),font:bf},grid:{color:GRID()}},
+      }}
+    });
+  }
+
+  // Gráfico origem
+  if(HOT_ORIGIN){
+    const tipos = HOT_ORIGIN.por_tipo;
+    dc('chOvOrigem');
+    CH['chOvOrigem'] = new Chart(document.getElementById('chOvOrigem'),{
+      type:'doughnut',
+      data:{
+        labels: tipos.map(t=>t.n),
+        datasets:[{data: tipos.map(t=>t.valor), backgroundColor:['#e11d48','#6366f1','#10b981','#f59e0b'], borderWidth:0}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{
+        legend:{position:'bottom',labels:{color:TXT(),font:bf,padding:8,boxWidth:10}},
+        datalabels:{display:true,color:'#fff',font:{size:10,weight:'bold'},formatter:(v,ctx)=>{
+          const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
+          return total>0?(v/total*100).toFixed(1)+'%':null;
+        }}
+      }}
+    });
+  }
+
+  // Insights
+  renderInsights();
+}
+
+function renderInsights(){
+  if(!getMetaKpis() || !getMetaCamps()) return;
+  const mk = META_KPIS;
+  const insights = [];
+
+  // Gargalo do funil
+  const taxas = [
+    {n:'CTR', v:mk.ctr, ref:1.0, desc:'impressões → cliques'},
+    {n:'Connect Rate', v:mk.connect_rate, ref:60, desc:'cliques → page view'},
+    {n:'Tx. Init Checkout', v:mk.tx_ic, ref:15, desc:'page view → checkout'},
+    {n:'Taxa Checkout', v:mk.tx_checkout, ref:30, desc:'checkout → compra'},
+  ];
+  const gargalo = taxas.reduce((a,b)=>(b.v&&b.v<b.ref&&(!a||b.v/b.ref<a.v/a.ref))?b:a, null);
+  if(gargalo) insights.push({icon:'⚠️',title:'Gargalo identificado',txt:`${gargalo.n} está em ${fP(gargalo.v)} (abaixo de ${gargalo.ref}%) — ${gargalo.desc}`});
+
+  // Melhor campanha
+  if(getMetaCamps() && getMetaCamps().length > 0){
+    const best = getMetaCamps().filter(c=>c.pur>0).sort((a,b)=>a.cpa-b.cpa)[0];
+    if(best) insights.push({icon:'🏆',title:'Melhor campanha',txt:`${best.n.split('-').slice(-2).join('-')} — CPA ${fR(best.cpa)} com ${fN(best.pur)} vendas`});
+  }
+
+  // ROAS
+  if(mk.roas >= ROAS_BOM) insights.push({icon:'🚀',title:'ROAS acima da meta',txt:`ROAS de ${fX(mk.roas)} — acima do esperado (${ROAS_BOM}x). Lançamento rentável.`});
+  else if(mk.roas && mk.roas < ROAS_MEDIO) insights.push({icon:'📉',title:'ROAS abaixo da meta',txt:`ROAS de ${fX(mk.roas)} está abaixo do mínimo (${ROAS_MEDIO}x). Revisar investimento.`});
+
+  // CPM
+  if(mk.cpm && mk.cpm > 40) insights.push({icon:'💰',title:'CPM elevado',txt:`CPM de ${fR(mk.cpm)} está alto. Considere revisar audiências ou criativos.`});
+
+  document.getElementById('insightsGrid').innerHTML = insights.map(i=>`
+    <div class="insight-card">
+      <div class="insight-icon">${i.icon}</div>
+      <div><div class="insight-title">${i.title}</div><div class="insight-txt">${i.txt}</div></div>
+    </div>`).join('');
+}
+
+// ═══ META ADS ═══
+function renderMeta(){
+  if(!getMetaKpis() || !getMetaDaily()) return;
+  const mk = getMetaKpis();
+  const md = getMetaDaily();
+
+  document.getElementById('metaKpis').innerHTML = `
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Investimento</div><div class="kpi-val" style="font-size:16px">${fRk(mk.spend)}</div></div>
+    <div class="kpi" style="--kc:#10b981"><div class="kpi-lbl">Receita Meta</div><div class="kpi-val" style="font-size:16px;color:#10b981">${fRk(mk.revenue)}</div></div>
+    <div class="kpi" style="--kc:${roasCls(mk.roas)==='cg'?'#10b981':roasCls(mk.roas)==='cw2'?'#f59e0b':'#ef4444'}"><div class="kpi-lbl">ROAS</div><div class="kpi-val ${roasCls(mk.roas)}">${fX(mk.roas)}</div></div>
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Compras</div><div class="kpi-val">${fN(mk.purchase)}</div></div>
+    <div class="kpi" style="--kc:${cpaCls(mk.cpa)==='cg'?'#10b981':cpaCls(mk.cpa)==='cw2'?'#f59e0b':'#ef4444'}"><div class="kpi-lbl">CPA</div><div class="kpi-val ${cpaCls(mk.cpa)}">${fR(mk.cpa)}</div></div>`;
+
+  setTimeout(()=> buildFunnel('funnelMeta', mk), 50);
+
+  dc('chMetaRev');
+  CH['chMetaRev'] = new Chart(document.getElementById('chMetaRev'),{
+    data:{labels:md.days,datasets:[
+      {label:'Invest.',data:md.spend,backgroundColor:'rgba(99,102,241,.6)',borderRadius:3,type:'bar'},
+      {label:'Receita',data:md.revenue,borderColor:'#10b981',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line'},
+    ]},
+    options:{...bo()}
+  });
+
+  dc('chMetaRoas');
+  CH['chMetaRoas'] = new Chart(document.getElementById('chMetaRoas'),{
+    type:'line',
+    data:{labels:md.days,datasets:[
+      {label:'ROAS',data:md.roas,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:true,
+       segment:{borderColor:ctx=>ctx.p1.parsed.y>=ROAS_BOM?'#10b981':ctx.p1.parsed.y>=ROAS_MEDIO?'#f59e0b':'#ef4444'}}
+    ]},
+    options:{...bo(),scales:{
+      x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
+      y:{ticks:{color:TXT(),font:bf,callback:v=>v+'x'},grid:{color:GRID()},min:0}
+    }}
+  });
+
+  dc('chMetaCTR');
+  CH['chMetaCTR'] = new Chart(document.getElementById('chMetaCTR'),{
+    type:'line',
+    data:{labels:md.days,datasets:[
+      {label:'CTR %',data:md.ctr,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.08)',fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:true},
+      {label:'Connect Rate %',data:md.connect_rate,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.08)',fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:true},
+    ]},
+    options:{...bo(),scales:{x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},y:{ticks:{color:TXT(),font:bf,callback:v=>v+'%'},grid:{color:GRID()},min:0}}}
+  });
+
+  dc('chMetaTx');
+  CH['chMetaTx'] = new Chart(document.getElementById('chMetaTx'),{
+    type:'line',
+    data:{labels:md.days,datasets:[
+      {label:'Tx. IC %',data:md.tx_ic,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.08)',fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:true},
+      {label:'Tx. Checkout %',data:md.tx_checkout,borderColor:'#a855f7',backgroundColor:'rgba(168,85,247,.08)',fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:true},
+    ]},
+    options:{...bo(),scales:{x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},y:{ticks:{color:TXT(),font:bf,callback:v=>v+'%'},grid:{color:GRID()},min:0}}}
+  });
+
+  renderAds();
+}
+
+function renderAds(){
+  if(!getMetaAds()) return;
+  const el = document.getElementById('adsGrid');
+  el.innerHTML = getMetaAds().slice(0,20).map(ad=>{
+    const img = ad.thumb ? `<img src="${ad.thumb}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=ad-img-placeholder>🖼️</div>'">` : '<div class="ad-img-placeholder">🖼️</div>';
+    return `<div class="ad-card">
+      <div class="ad-img-wrap">${img}</div>
+      <div class="ad-info">
+        <div class="ad-name">${ad.n}</div>
+        <div class="ad-stats">
+          <div><div class="as-l">Compras</div><div class="as-v">${fN(ad.pur)}</div></div>
+          <div><div class="as-l">CPA</div><div class="as-v ${cpaCls(ad.cpa)}">${fR(ad.cpa)}</div></div>
+          <div><div class="as-l">ROAS</div><div class="as-v ${roasCls(ad.roas)}">${fX(ad.roas)}</div></div>
+          <div><div class="as-l">CTR</div><div class="as-v">${fP(ad.ctr)}</div></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══ MÉTRICAS DIÁRIAS ═══
+function renderDiario(){
+  if(!getMetaDaily()) return;
+  const md = getMetaDaily();
+
+  dc('chDCPM');
+  CH['chDCPM'] = new Chart(document.getElementById('chDCPM'),{
+    data:{labels:md.days,datasets:[
+      {label:'Impressões',data:md.impressions,backgroundColor:'rgba(99,102,241,.5)',borderRadius:2,type:'bar',yAxisID:'y1'},
+      {label:'CPM',data:md.cpm,borderColor:'#f59e0b',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line',yAxisID:'y',spanGaps:true},
+    ]},
+    options:{...bo(),scales:{
+      x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
+      y:{ticks:{color:TXT(),font:bf,callback:v=>'R$'+v},grid:{color:GRID()}},
+      y1:{position:'right',ticks:{color:TXT(),font:bf},grid:{display:false}},
+    }}
+  });
+
+  function lineChart(id, data, color, label, suffix='%'){
+    dc(id);
+    CH[id] = new Chart(document.getElementById(id),{type:'line',data:{labels:md.days,datasets:[{label,data,borderColor:color,backgroundColor:color.replace(')',', .08)').replace('rgb','rgba'),fill:true,tension:.3,pointRadius:2,borderWidth:2,spanGaps:true}]},
+      options:{...bo(),scales:{x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},y:{ticks:{color:TXT(),font:bf,callback:v=>v+suffix},grid:{color:GRID()},min:0}}}
+    });
+  }
+
+  lineChart('chDCTR', md.ctr, '#3b82f6', 'CTR %');
+  lineChart('chDCR',  md.connect_rate, '#10b981', 'Connect Rate %');
+  lineChart('chDIC',  md.tx_ic, '#f97316', 'Tx. Init Checkout %');
+  lineChart('chDCV',  md.tx_conv, '#a855f7', 'Taxa Conversão %');
+
+  dc('chDCK');
+  CH['chDCK'] = new Chart(document.getElementById('chDCK'),{
+    data:{labels:md.days,datasets:[
+      {label:'Compras',data:md.purchase,backgroundColor:'rgba(16,185,129,.7)',borderRadius:2,type:'bar',yAxisID:'y1'},
+      {label:'Taxa Checkout %',data:md.tx_checkout,borderColor:'#6366f1',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line',yAxisID:'y',spanGaps:true},
+    ]},
+    options:{...bo(),scales:{
+      x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
+      y:{ticks:{color:TXT(),font:bf,callback:v=>v+'%'},grid:{color:GRID()},min:0},
+      y1:{position:'right',ticks:{color:TXT(),font:bf},grid:{display:false}},
+    }}
+  });
+}
+
+// ═══ TABELAS ═══
+function renderTabelas(){
+  const COLS = [
+    {k:'n', label:'Nome', num:false, w:'220px'},
+    {k:'spend', label:'Invest.', num:true, fmt:fRk},
+    {k:'imp', label:'Impr.', num:true, fmt:fN},
+    {k:'lc', label:'Cliques', num:true, fmt:fN},
+    {k:'pv', label:'Page View', num:true, fmt:fN},
+    {k:'ic', label:'Init CK', num:true, fmt:fN},
+    {k:'pur', label:'Compras', num:true, fmt:fN},
+    {k:'rev', label:'Receita', num:true, fmt:fRk},
+    {k:'ctr', label:'CTR', num:true, fmt:fP},
+    {k:'cr', label:'C. Rate', num:true, fmt:fP},
+    {k:'tx_cv', label:'Tx. Conv', num:true, fmt:fP},
+    {k:'cpa', label:'CPA', num:true, cls:cpaCls, fmt:fR},
+    {k:'roas', label:'ROAS', num:true, cls:roasCls, fmt:fX},
+  ];
+
+  function buildTable(elId, data, maxRows=50){
+    if(!data) return;
+    const el = document.getElementById(elId);
+    const head = COLS.map(c=>`<th class="${c.num?'num':''}">${c.label}</th>`).join('');
+    const rows = data.slice(0,maxRows).map(r=>{
+      const tds = COLS.map(c=>{
+        const v = r[c.k];
+        const fmt = c.fmt ? c.fmt(v) : (v||'—');
+        const cls = c.cls ? c.cls(v) : '';
+        const style = c.k==='n' ? `style="max-width:${c.w||'auto'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap"` : '';
+        return `<td class="${c.num?'num':''} ${cls}" ${style}>${fmt}</td>`;
+      }).join('');
+      return `<tr>${tds}</tr>`;
+    }).join('');
+    el.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  buildTable('tCamps',  getMetaCamps());
+  buildTable('tAdsets', getMetaAdsets(), 30);
+
+  // Tabela origem Hotmart
+  if(HOT_ORIGIN){
+    const el = document.getElementById('tOrigem');
+    const src = HOT_ORIGIN.por_source;
+    const tot = src.reduce((a,b)=>a+b.valor,0);
+    el.innerHTML = `<table>
+      <thead><tr><th>Origem (utm_source)</th><th class="num">Vendas</th><th class="num">Faturamento</th><th class="num">% Fat.</th></tr></thead>
+      <tbody>${src.map(r=>`<tr>
+        <td>${r.n||'—'}</td>
+        <td class="num">${fN(r.qtd)}</td>
+        <td class="num">${fRk(r.valor)}</td>
+        <td class="num">${tot>0?(r.valor/tot*100).toFixed(1)+'%':'—'}</td>
+      </tr>`).join('')}</tbody></table>`;
+  }
+}
+
+// ═══ PESQUISA ═══
+let pesOrigemAtual = 'all';
+const PIZZA_COLORS = ['#6366f1','#3b82f6','#10b981','#f59e0b','#ef4444','#a855f7','#0ea5e9','#f97316','#14b8a6','#ec4899'];
+const PES_CH = {};
+
+function renderPesquisa(){
+  if(!PESQUISA) return;
+  const p = PESQUISA;
+
+  // Total
+  document.getElementById('pesTotal').textContent = `— ${p.total} respostas`;
+
+  // Filtros
+  const filterEl = document.getElementById('pesFilter');
+  const sources = ['all', ...p.sources.filter(s=>s&&s!=='na'&&s!=='undefined')];
+  filterEl.innerHTML = sources.map(s=>`
+    <button class="filter-btn ${s==='all'?'active':''}" onclick="setPesOrigem('${s}',this)">
+      ${s==='all'?'Todas origens':s}
+    </button>`).join('');
+
+  buildPizzas('all');
+}
+
+function setPesOrigem(src, btn){
+  pesOrigemAtual = src;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  buildPizzas(src);
+}
+
+function buildPizzas(src){
+  if(!PESQUISA) return;
+  const graficos = src==='all'
+    ? PESQUISA.graficos
+    : PESQUISA.graficos.map(g=>{
+        const por = PESQUISA.por_origem?.[src]?.[g.pergunta];
+        if(!por) return g;
+        // recalcular com dados filtrados
+        return {...g, opcoes: por.map(o=>({label:o.label,pct:o.pct,qtd:null}))};
+      });
+
+  const grid = document.getElementById('pizzaGrid');
+  grid.innerHTML = graficos.map((g,i)=>`
+    <div class="pizza-card">
+      <div class="pizza-q">${g.pergunta}</div>
+      <div class="pizza-chart-wrap"><canvas id="pizza_${i}"></canvas></div>
+      <div class="pizza-legend" id="leg_${i}"></div>
+    </div>`).join('');
+
+  graficos.forEach((g,i)=>{
+    const id = `pizza_${i}`;
+    if(PES_CH[id]){ PES_CH[id].destroy(); delete PES_CH[id]; }
+    const labels = g.opcoes.map(o=>o.label);
+    const data   = g.opcoes.map(o=>o.pct||o.qtd||0);
+    PES_CH[id] = new Chart(document.getElementById(id),{
+      type:'doughnut',
+      data:{labels,datasets:[{data,backgroundColor:PIZZA_COLORS.slice(0,labels.length),borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{
+        legend:{display:false},
+        datalabels:{display:true,color:'#fff',font:{size:9,weight:'bold'},formatter:v=>v>5?v.toFixed(0)+'%':null}
+      }}
+    });
+    // Legend manual
+    document.getElementById(`leg_${i}`).innerHTML = g.opcoes.slice(0,6).map((o,j)=>`
+      <div class="pizza-leg-item">
+        <div class="pizza-leg-dot" style="background:${PIZZA_COLORS[j]}"></div>
+        <div class="pizza-leg-label" title="${o.label}">${o.label}</div>
+        <div class="pizza-leg-pct">${o.pct!=null?o.pct+'%':(o.qtd||0)}</div>
+      </div>`).join('');
+  });
+}
+
+// ═══ NAVEGAÇÃO ═══
+function showPage(p, btn){
+  document.querySelectorAll('.page-section').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(e=>e.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  if(btn) btn.classList.add('active');
+  const titles={overview:'Overview',meta:'Meta Ads',diario:'Métricas Diárias',tabelas:'Tabelas',pesquisa:'Pesquisa'};
+  document.getElementById('pageTitle').textContent = titles[p]||p;
+  if(p==='meta') renderMeta();
+  if(p==='diario') renderDiario();
+  if(p==='tabelas') renderTabelas();
+  if(p==='pesquisa') renderPesquisa();
+  setTimeout(()=>Object.values({...CH,...PES_CH}).forEach(c=>{try{c.resize();}catch(e){}}), 50);
+  if(window.innerWidth<=768) closeSb();
+}
+
+// ═══ TEMA ═══
+function toggleTheme(){
+  const dark = document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme', dark?'light':'dark');
+  document.getElementById('themeIcon').textContent  = dark?'🌙':'☀️';
+  document.getElementById('themeLabel').textContent = dark?'Escuro':'Claro';
+  localStorage.setItem('lct-theme', dark?'light':'dark');
+  // Rerender charts ativos
+  const active = document.querySelector('.page-section.active')?.id?.replace('page-','');
+  if(active==='overview') renderOverview();
+  if(active==='meta') renderMeta();
+  if(active==='diario') renderDiario();
+}
+(function(){
+  const s = localStorage.getItem('lct-theme');
+  if(s==='light'){ document.documentElement.setAttribute('data-theme','light'); }
+})();
+
+// ═══ SIDEBAR MOBILE ═══
+function toggleSb(){ document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); }
+function closeSb(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
+
+// ═══ INIT ═══
+(function(){
+  // Aplicar config
+  const lb = document.getElementById('logoBox');
+  if(lb){ lb.textContent=LOGO_LETRA; lb.style.background=`linear-gradient(135deg,${COR_ACENTO},${COR_ACENTO}cc)`; }
+  document.getElementById('sbNome').textContent = NOME_CLIENTE;
+  document.getElementById('sbLct').textContent = LANCAMENTO_COD||'Todos';
+  // Mostrar filtro de lançamento só se houver código definido
+  if(LANCAMENTO_COD){
+    const fb = document.getElementById('lctFilterBar');
+    if(fb) fb.style.display='flex';
+    const lbl = document.getElementById('lctCodLabel');
+    if(lbl) lbl.textContent = LANCAMENTO_COD;
+  }
+  document.getElementById('pageTab').textContent = `${NOME_CLIENTE} — Dashboard`;
+  document.documentElement.style.setProperty('--accent', COR_ACENTO);
+
+  // Badge
+  const badge = document.getElementById('liveBadge');
+  const pulse = document.getElementById('livePulse');
+  badge.style.cssText = `background:${COR_ACENTO}15;border:1px solid ${COR_ACENTO}44;color:${COR_ACENTO};`;
+  pulse.style.background = COR_ACENTO;
+
+  // Data últimos dados
+  if(META_DAILY && META_DAILY.days && META_DAILY.days.length){
+    document.getElementById('liveTxt').textContent = 'Dados até '+META_DAILY.days[META_DAILY.days.length-1];
+  }
+
+  renderOverview();
+})();
+</script>
+</body>
+</html>
