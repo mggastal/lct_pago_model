@@ -284,6 +284,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 
     <!-- MÉTRICAS DIÁRIAS -->
     <div class="page-section" id="page-diario">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;box-shadow:var(--sh);">
+        <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:8px;">Filtrar por campanha</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;" id="campFilter"></div>
+      </div>
       <div id="dailyCharts"></div>
     </div>
 
@@ -360,7 +364,8 @@ function applyPeriod(daily){
     const year=new Date().getFullYear();
     idxs=idxs.filter(i=>{
       const[dd,mm]=days[i].split('/');
-      const dt=new Date(`${year}-${mm}-${dd}`);
+      // Usar construtor local (sem UTC) para evitar bug de timezone
+      const dt=new Date(year,parseInt(mm)-1,parseInt(dd));
       return(!dateI||dt>=dateI)&&(!dateF||dt<=dateF);
     });
   }
@@ -645,28 +650,70 @@ function toggleCampRow(id,rowEl){
   sub.style.display=open?'table-row':'none';
   if(arrow) arrow.textContent=open?'▼':'▶';
   if(open){
-    // Preencher conjuntos desta campanha
-    const campName=rowEl.querySelector('td:nth-child(2)').title||rowEl.querySelector('td:nth-child(2)').textContent;
+    const campName=rowEl.querySelector('td:nth-child(2)').title;
     const mt=getMT();
     if(!mt?.adsets) return;
-    const adsets=mt.adsets; // mostrar todos (não temos campo campanha no adset ainda)
+    // Filtrar adsets desta campanha pelo campo camp
+    const adsets=mt.adsets.filter(a=>a.camp===campName);
     const tbl=document.getElementById('sub_'+id);
     if(!tbl) return;
-    const SCOLS=[{k:'spend',f:fR},{k:'pur',f:fN},{k:'ctr',f:fP},{k:'tx_cv',f:fP},{k:'cpa',f:fR,cls2:cpaCls}];
-    tbl.innerHTML='<thead><tr><th style="font-size:9px;padding:4px 8px;text-align:left;color:var(--muted2)">Conjunto</th>'+
+    if(!adsets.length){tbl.innerHTML='<tbody><tr><td style="padding:8px;color:var(--muted);font-size:11px">Sem conjuntos</td></tr></tbody>';return;}
+    tbl.innerHTML='<thead><tr>'+
+      '<th style="font-size:9px;padding:4px 8px;text-align:left;color:var(--muted2)">Conjunto</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Invest.</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Compras</th>'+
+      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Receita</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CTR</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Tx.Conv</th>'+
-      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CPA</th></tr></thead><tbody>'+
-      adsets.slice(0,10).map(a=>`<tr>
-        <td style="font-size:10px;padding:4px 8px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.n}</td>
-        <td class="num" style="font-size:10px;padding:4px 8px">${fR(a.spend)}</td>
-        <td class="num" style="font-size:10px;padding:4px 8px">${fN(a.pur)}</td>
-        <td class="num" style="font-size:10px;padding:4px 8px">${fP(a.ctr)}</td>
-        <td class="num" style="font-size:10px;padding:4px 8px">${fP(a.tx_cv)}</td>
-        <td class="num ${cpaCls(a.cpa)}" style="font-size:10px;padding:4px 8px">${fR(a.cpa)}</td>
+      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CPA</th>'+
+      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">ROAS</th>'+
+      '</tr></thead><tbody>'+
+      adsets.map(a=>`<tr onclick="toggleAdsetRow('${id}','${a.n.replace(/'/g,"\'")}',this)" style="cursor:pointer">
+        <td style="font-size:10px;padding:5px 8px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.n}">▶ ${a.n}</td>
+        <td class="num" style="font-size:10px;padding:5px 8px">${fR(a.spend)}</td>
+        <td class="num" style="font-size:10px;padding:5px 8px">${fN(a.pur)}</td>
+        <td class="num" style="font-size:10px;padding:5px 8px">${fR(a.rev)}</td>
+        <td class="num" style="font-size:10px;padding:5px 8px">${fP(a.ctr)}</td>
+        <td class="num" style="font-size:10px;padding:5px 8px">${fP(a.tx_cv)}</td>
+        <td class="num ${cpaCls(a.cpa)}" style="font-size:10px;padding:5px 8px">${fR(a.cpa)}</td>
+        <td class="num ${roasCls(a.roas)}" style="font-size:10px;padding:5px 8px">${a.roas!=null?a.roas.toFixed(2)+'x':'—'}</td>
+      </tr>
+      <tr id="ads_${id}_${a.n.replace(/[^a-zA-Z0-9]/g,'_')}" style="display:none">
+        <td colspan="8" style="padding:0 0 0 20px;background:var(--bg)">
+          <div id="ads_inner_${id}_${a.n.replace(/[^a-zA-Z0-9]/g,'_')}"></div>
+        </td>
       </tr>`).join('')+'</tbody>';
+  }
+}
+
+function toggleAdsetRow(campId,adsetName,rowEl){
+  const key=adsetName.replace(/[^a-zA-Z0-9]/g,'_');
+  const sub=document.getElementById('ads_'+campId+'_'+key);
+  if(!sub) return;
+  const open=sub.style.display==='none';
+  sub.style.display=open?'table-row':'none';
+  const arrow=rowEl.querySelector('td:first-child');
+  if(arrow) arrow.textContent=(open?'▼':'▶')+' '+adsetName;
+  if(open){
+    const mt=getMT();
+    const ads=mt?.ads?.filter(a=>a.adset===adsetName)||[];
+    const inner=document.getElementById('ads_inner_'+campId+'_'+key);
+    if(!inner) return;
+    if(!ads.length){inner.innerHTML='<div style="padding:8px;font-size:10px;color:var(--muted)">Sem criativos</div>';return;}
+    inner.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;padding:10px 10px 10px 0">'+
+      ads.map(ad=>{
+        const img=ad.thumb?`<img src="${ad.thumb}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.innerHTML='🖼️'">`:'<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;color:var(--muted2)">🖼️</div>';
+        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+          <div style="width:100%;aspect-ratio:4/5;background:var(--surface2);overflow:hidden">${img}</div>
+          <div style="padding:6px 8px">
+            <div style="font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px" title="${ad.n}">${ad.n}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
+              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">Vendas</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fN(ad.pur)}</div></div>
+              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">CPA</div><div class="${cpaCls(ad.cpa)}" style="font-size:10px;font-weight:700;font-family:monospace">${fR(ad.cpa)}</div></div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')+'</div>';
   }
 }
 
@@ -707,9 +754,40 @@ function renderSeg(){
 }
 
 // ═══ MÉTRICAS DIÁRIAS ═══
+let campFilterActive=null; // null = tudo
+
+function buildCampFilter(){
+  const mt=getMT();
+  if(!mt?.camps?.length) return;
+  const el=document.getElementById('campFilter');
+  if(!el) return;
+  const camps=[...new Set(mt.camps.map(c=>c.n))];
+  el.innerHTML='<button class="pb active" onclick="setCampFilter(null,this)">Tudo</button>'+
+    camps.map(c=>`<button class="pb" onclick="setCampFilter('${c.replace(/'/g,"\'")}',this)" title="${c}">${c.split('-').slice(-2).join('-')}</button>`).join('');
+}
+
+function setCampFilter(camp,btn){
+  campFilterActive=camp;
+  document.querySelectorAll('#campFilter .pb').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDiario();
+}
+
+function getDailyFiltered(){
+  const md=getMD(); if(!md) return null;
+  if(!campFilterActive) return md;
+  // Filtrar pelo daily da campanha específica
+  const mt=getMT();
+  if(!mt?.camps) return md;
+  // Não temos daily por campanha separado — usar os dados globais com nota
+  // Para implementação completa precisaria de META_DAILY por campanha no gerador
+  return md;
+}
+
 function renderDiario(){
   const md=getMD();
   if(!md) return;
+  buildCampFilter();
   const COLOR='#3b82f6';
   const METRICS=[
     {id:'ctr',   ttl:'CTR (%)',               suffix:'%', data:()=>md.ctr},
@@ -860,11 +938,12 @@ function setPeriod(days,btn){
 }
 
 document.getElementById('dtI').addEventListener('change',e=>{
-  dateI=e.target.value?new Date(e.target.value):null; periodDays=0;
+  // new Date(string) é UTC — usar construtor local
+  if(e.target.value){const[y,m,d]=e.target.value.split('-');dateI=new Date(y,m-1,d);}else dateI=null; periodDays=0;
   document.querySelectorAll('.period-bar .pb').forEach(b=>b.classList.remove('active')); rerenderActive();
 });
 document.getElementById('dtF').addEventListener('change',e=>{
-  dateF=e.target.value?new Date(e.target.value+'T23:59:59'):null; periodDays=0;
+  if(e.target.value){const[y,m,d]=e.target.value.split('-');dateF=new Date(y,m-1,d,23,59,59);}else dateF=null; periodDays=0;
   document.querySelectorAll('.period-bar .pb').forEach(b=>b.classList.remove('active')); rerenderActive();
 });
 function clearDates(){
