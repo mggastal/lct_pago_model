@@ -35,8 +35,12 @@ URL_GA   = sheet_url("breakdown-gender-age")
 URL_PT   = sheet_url("breakdown-platform")
 
 def to_num(s):
-    return pd.to_numeric(s.astype(str).str.replace("R$","",regex=False)
-        .str.replace(".","",regex=False).str.replace(",",".",regex=False).str.strip(),
+    # Se já é numérico, não converter (evita remover pontos decimais)
+    if pd.api.types.is_numeric_dtype(s):
+        return s.fillna(0)
+    return pd.to_numeric(
+        s.astype(str).str.replace("R$","",regex=False)
+         .str.replace(".","",regex=False).str.replace(",",".",regex=False).str.strip(),
         errors="coerce").fillna(0)
 def safe(v):
     if v is None or (isinstance(v,float) and pd.isna(v)): return None
@@ -174,12 +178,13 @@ def meta_tables(df, img_dir, ticket):
     def make_ads(p):
         df_t=p[p["thumb"].notna()&(p["thumb"].astype(str)!="nan")].copy()
         if df_t.empty: return []
-        agg=df_t.groupby(["ad","thumb"]).agg(spend=("spend","sum"),impressions=("impressions","sum"),
+        agg=df_t.groupby(["ad","adset","campaign","thumb"]).agg(spend=("spend","sum"),impressions=("impressions","sum"),
             link_clicks=("link_clicks","sum"),purchase=("purchase","sum")).reset_index().sort_values("purchase",ascending=False)
         ads=[]
         for _,r in agg.iterrows():
             sp=float(r["spend"]); imp=float(r["impressions"]); lc=float(r["link_clicks"]); pur=float(r["purchase"])
-            ads.append({"n":str(r["ad"]),"thumb":download_thumb(str(r["thumb"]),img_dir),
+            ads.append({"n":str(r["ad"]),"adset":str(r["adset"]),"camp":str(r["campaign"]),
+                "thumb":download_thumb(str(r["thumb"]),img_dir),
                 "spend":round(sp,2),"pur":int(pur),
                 "ctr":round(lc/imp*100,2) if imp>0 else None,
                 "cpa":round(sp/pur,2) if pur>0 else None})
