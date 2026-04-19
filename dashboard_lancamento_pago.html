@@ -847,6 +847,8 @@ function toggleAdsetRow(campId,adsetName,rowEl){
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
               <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">Vendas</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fN(ad.pur)}</div></div>
               <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">CPA</div><div class="${cpaCls(ad.cpa)}" style="font-size:10px;font-weight:700;font-family:monospace">${fR(ad.cpa)}</div></div>
+              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">CTR</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fP(ad.ctr)}</div></div>
+              <div><div style="font-size:7px;color:var(--muted2);text-transform:uppercase">Invest.</div><div style="font-size:10px;font-weight:700;font-family:monospace">${fR(ad.spend)}</div></div>
             </div>
           </div>
         </div>`;
@@ -891,12 +893,11 @@ function renderSeg(){
 }
 
 // ═══ MÉTRICAS DIÁRIAS ═══
-let campFilterActive=null; // null = tudo
+let campFilterSel=new Set(); // Set vazio = todas as campanhas
 
 function buildCampFilter(){
   const el=document.getElementById('campFilter');
   if(!el) return;
-  // Usar META_DAILY_CAMPS para mostrar só campanhas com dados no período atual
   const dcBase=filtroLct?META_DAILY_CAMPS?.lct:META_DAILY_CAMPS?.all;
   let camps=[];
   if(dcBase){
@@ -909,27 +910,61 @@ function buildCampFilter(){
     camps=mt?.camps?.map(c=>c.n)||[];
   }
   if(!camps.length) return;
-  el.innerHTML='<button class="pb active" onclick="setCampFilter(null,this)" style="font-size:10px">Todas</button>'+
-    camps.map(c=>`<button class="pb" onclick="setCampFilter('${c.replace(/'/g,"\'")}',this)" title="${c}" style="font-size:10px;white-space:normal;text-align:left;height:auto;padding:4px 8px;margin-bottom:2px">${c}</button>`).join('');
+  el.innerHTML='<div style="display:flex;flex-direction:column;gap:3px;">'
+    +'<label style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border)">'
+    +'<input type="checkbox" id="cb_todas" onchange="toggleTodas(this)" checked style="accent-color:var(--accent)"> Todas</label>'
+    +camps.map(c=>`<label style="display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:10px;background:var(--surface);border:1px solid var(--border)" title="${c}">
+      <input type="checkbox" class="camp-cb" value="${c.replace(/"/g,'&quot;')}" onchange="onCampCheck()" checked style="accent-color:var(--accent);flex-shrink:0"> <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</span>
+    </label>`).join('')
+    +'</div>';
+  campFilterSel=new Set();
 }
-
-function setCampFilter(camp,btn){
-  campFilterActive=camp;
-  document.querySelectorAll('#campFilter .pb').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderDiario();
+function toggleTodas(cb){
+  document.querySelectorAll('.camp-cb').forEach(c=>{c.checked=cb.checked;});
+  campFilterSel=new Set();
+  renderDiarioCharts();
+}
+function onCampCheck(){
+  const checked=[...document.querySelectorAll('.camp-cb:checked')].map(c=>c.value);
+  const all=[...document.querySelectorAll('.camp-cb')].map(c=>c.value);
+  const todasCb=document.getElementById('cb_todas');
+  if(todasCb) todasCb.checked=(checked.length===all.length);
+  campFilterSel=checked.length===all.length?new Set():new Set(checked);
+  renderDiarioCharts();
 }
 
 
 
 function getDailyForCamp(){
   const md=getMD(); if(!md) return md;
-  if(!campFilterActive||!META_DAILY_CAMPS) return md;
+  if(!META_DAILY_CAMPS||campFilterSel.size===0) return md; // sem filtro = tudo
   const base=filtroLct?META_DAILY_CAMPS?.lct:META_DAILY_CAMPS?.all;
   if(!base) return md;
-  const cd=base[campFilterActive];
-  if(!cd) return md;
-  return applyPeriod(cd);
+  // Combinar dailys de todas as campanhas selecionadas
+  const selected=[...campFilterSel].map(c=>applyPeriod(base[c])).filter(Boolean);
+  if(!selected.length) return md;
+  if(selected.length===1) return selected[0];
+  // Somar arrays dia a dia usando as datas do getMD() como eixo
+  const ref=applyPeriod(md); // dias filtrados pelo período
+  const out={days:ref.days};
+  const numKeys=['spend','impressions','link_clicks','page_view','init_checkout','purchase'];
+  numKeys.forEach(k=>{
+    out[k]=ref.days.map(day=>{
+      return selected.reduce((sum,s)=>{
+        const i=s.days?.indexOf(day);
+        return sum+(i>=0?(s[k]?.[i]||0):0);
+      },0);
+    });
+  });
+  // Recalcular taxas
+  out.ctr=out.days.map((_,i)=>out.impressions[i]>0?+(out.link_clicks[i]/out.impressions[i]*100).toFixed(2):null);
+  out.connect_rate=out.days.map((_,i)=>out.link_clicks[i]>0?+(out.page_view[i]/out.link_clicks[i]*100).toFixed(2):null);
+  out.tx_ic=out.days.map((_,i)=>out.page_view[i]>0?+(out.init_checkout[i]/out.page_view[i]*100).toFixed(2):null);
+  out.tx_checkout=out.days.map((_,i)=>out.init_checkout[i]>0?+(out.purchase[i]/out.init_checkout[i]*100).toFixed(2):null);
+  out.tx_conv=out.days.map((_,i)=>out.page_view[i]>0?+(out.purchase[i]/out.page_view[i]*100).toFixed(2):null);
+  out.cpa=out.days.map((_,i)=>out.purchase[i]>0?+(out.spend[i]/out.purchase[i]).toFixed(2):null);
+  out.cpm=out.days.map((_,i)=>out.impressions[i]>0?+(out.spend[i]/out.impressions[i]*1000).toFixed(2):null);
+  return out;
 }
 
 function renderDiario(){
