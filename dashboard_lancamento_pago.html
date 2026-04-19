@@ -56,7 +56,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .theme-btn{padding:4px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px;}
 
 /* CONTENT */
-.content{padding:18px 22px 18px 22px;flex:1;overflow-x:hidden;}
+.content{padding:115px 22px 18px 22px;flex:1;overflow-x:hidden;}
 .page-section{display:none;}
 .page-section.active{display:block;}
 
@@ -172,6 +172,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .overlay.open{display:block;}
 @media(max-width:768px){.topbar{left:0;right:0;}
   .ov-bottom{grid-template-columns:1fr!important;}
+  .content{padding-top:150px!important;}
 
   .app{grid-template-columns:1fr;}
   .sb{display:none;position:fixed;top:0;left:0;width:240px;height:100vh;z-index:310;}
@@ -1157,9 +1158,12 @@ function ajustarPaddingContent(){
   const ct=document.querySelector('.content');
   if(tb&&ct){
     const h=tb.getBoundingClientRect().height;
-    ct.style.paddingTop=(h+12)+'px';
+    if(h>0) ct.style.paddingTop=(h+10)+'px';
   }
 }
+// Rodar imediatamente + após fonts/imgs carregarem + no resize
+ajustarPaddingContent();
+document.addEventListener('DOMContentLoaded', ajustarPaddingContent);
 window.addEventListener('load', ajustarPaddingContent);
 window.addEventListener('resize', ajustarPaddingContent);
 
@@ -1182,7 +1186,7 @@ window.addEventListener('resize', ajustarPaddingContent);
   }
   if(LANCAMENTO_COD){const lb2=document.getElementById('lctBar');if(lb2)lb2.style.display='flex';document.getElementById('btnLctOn').textContent=LANCAMENTO_COD;}
   renderOverview();
-  setTimeout(ajustarPaddingContent, 100);
+  ajustarPaddingContent();
 })();
 </script>
 </body>
