@@ -326,16 +326,17 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 Chart.register(ChartDataLabels);
 
 // ═══ DADOS ═══
-const META_KPIS        = null;
-const META_DAILY       = null;
-const META_DAILY_CAMPS = null;
-const META_TABLES      = null;
+const META_KPIS     = null;
+const META_DAILY     = null;
+const META_DAILY_CAMPS     = null;
+const META_TABLES     = null;
 const DATA_GERACAO     = null;
-const META_BD      = null;
+const META_BD     = null;
 const HOT_KPIS     = null;
-const HOT_DAILY    = null;
+const HOT_DAILY     = null;
+const HOT_RAW     = null;
 const PESQUISA     = null;
-const TICKET_MEDIO = null;
+const TICKET_MEDIO     = null;
 
 // ═══ CONFIG ═══
 const LANCAMENTO_COD='VSE02';
@@ -508,12 +509,20 @@ function renderOverview(){
   if(!mk||!hk){console.warn('Overview: dados não prontos');return;}
   const roasReal=mk.spend>0?r2(hk.total/mk.spend):null;
 
-  // KPIs filtrados pelo período selecionado
-  const mdKpi=getMD(); const hdKpi=getHD();
+  // KPIs filtrados pelo período — Meta via daily, Hotmart via raw
+  const mdKpi=getMD();
   const spendF=mdKpi?.spend?.reduce((a,b)=>a+(b||0),0)||0;
   const purF=  mdKpi?.purchase?.reduce((a,b)=>a+(b||0),0)||0;
-  const hotQtdF=hdKpi?.qtd?.reduce((a,b)=>a+(b||0),0)||0;
-  const hotValF=hdKpi?.valor?.reduce((a,b)=>a+(b||0),0)||0;
+  // Hotmart: filtrar HOT_RAW pelo período
+  const hoje2=getHoje();
+  const rawKpi=(HOT_RAW||[]).filter(r=>{
+    const dt=parseDayStr(r.d);
+    if(periodDays>0){const ini=new Date(hoje2);ini.setDate(ini.getDate()-(periodDays-1));ini.setHours(0,0,0,0);if(dt<ini||dt>hoje2)return false;}
+    if(dateI&&dt<dateI)return false; if(dateF&&dt>dateF)return false;
+    return true;
+  });
+  const hotQtdF=rawKpi.length;
+  const hotValF=r2(rawKpi.reduce((s,r)=>s+r.v,0));
   const roasF=spendF>0&&hotValF>0?r2(hotValF/spendF):null;
   const cpaF=spendF>0&&purF>0?r2(spendF/purF):null;
   document.getElementById('ovKpis').innerHTML=`
@@ -574,25 +583,27 @@ function renderOverview(){
     });
   }
 
-  // Origem e produto filtrados pelo período (usar HOT_DAILY filtrado)
-  {
-    const hdF=getHD(); // já filtrado pelo período
-    // Recalcular pago/orgânico do período via HOT_DAILY não é possível (não temos breakdown diário)
-    // Usar HOT_KPIS para pago/orgânico (total) mas qtd filtrada pelo período
-    const hotQtdPeriodo=hdF?.qtd?.reduce((a,b)=>a+(b||0),0)||0;
-    const hotValPeriodo=hdF?.valor?.reduce((a,b)=>a+(b||0),0)||0;
-    // Proporção: usar a proporção total do hk aplicada ao período
-    const propPago=hk&&hk.qtd>0?hk.pago_qtd/hk.qtd:0;
-    const propOrg =hk&&hk.qtd>0?hk.org_qtd/hk.qtd:0;
-    const pagoPeriodo=Math.round(hotQtdPeriodo*propPago);
-    const orgPeriodo =Math.round(hotQtdPeriodo*propOrg);
+  // Origem e produto — filtrar HOT_RAW pelo período atual
+  if(HOT_RAW?.length){
+    const hoje=getHoje();
+    const rawF=HOT_RAW.filter(r=>{
+      const dt=parseDayStr(r.d);
+      if(periodDays>0){
+        const ini=new Date(hoje); ini.setDate(ini.getDate()-(periodDays-1)); ini.setHours(0,0,0,0);
+        if(dt<ini||dt>hoje) return false;
+      }
+      if(dateI&&dt<dateI) return false;
+      if(dateF&&dt>dateF) return false;
+      return true;
+    });
 
+    // Pago vs Orgânico
+    const pagoCnt=rawF.filter(r=>r.t&&r.t.includes('Pago')).length;
+    const orgCnt =rawF.filter(r=>r.t&&r.t.includes('rgân')).length;
     dc('chOvOrigem');
-    const labels=['Tráfego Pago','Orgânico'];
-    const vals=[pagoPeriodo, orgPeriodo];
     CH['chOvOrigem']=new Chart(document.getElementById('chOvOrigem'),{
       type:'doughnut',
-      data:{labels,datasets:[{data:vals,backgroundColor:['#f97316','#ea580c'],borderWidth:0}]},
+      data:{labels:['Tráfego Pago','Orgânico'],datasets:[{data:[pagoCnt,orgCnt],backgroundColor:['#f97316','#ea580c'],borderWidth:0}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{
         legend:{position:'bottom',labels:{color:TXT(),font:bf,padding:10,boxWidth:10}},
         datalabels:{display:true,color:'#fff',font:{size:11,weight:'bold'},
@@ -601,25 +612,21 @@ function renderOverview(){
       }}
     });
 
-    // Tabela por produto — proporção do período
+    // Por produto — somar do raw filtrado
+    const prodMap={};
+    rawF.forEach(r=>{
+      if(!prodMap[r.p]) prodMap[r.p]={produto:r.p,pago:0,org:0,total:0,val:0};
+      prodMap[r.p].total++;
+      prodMap[r.p].val=r2(prodMap[r.p].val+r.v);
+      if(r.t&&r.t.includes('Pago')) prodMap[r.p].pago++;
+      else if(r.t&&r.t.includes('rgân')) prodMap[r.p].org++;
+    });
+    const prods=Object.values(prodMap).sort((a,b)=>b.val-a.val);
     const el=document.getElementById('tPorProduto');
     const sub=document.getElementById('ccProdutoSub');
-    if(el&&hk?.por_produto?.length){
-      const fatorPeriodo=hk.qtd>0?hotQtdPeriodo/hk.qtd:1;
-      const rows=hk.por_produto.map(p=>{
-        const qtdP=Math.round(p.total_qtd*fatorPeriodo);
-        const pagoP=Math.round(p.pago_qtd*fatorPeriodo);
-        const orgP =Math.round(p.org_qtd*fatorPeriodo);
-        const valP =r2(p.total_val*fatorPeriodo);
-        return `<tr>
-          <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 10px;border-bottom:1px solid var(--border)" title="${p.produto}">${p.produto}</td>
-          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#f97316">${fN(pagoP)}</td>
-          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#ea580c">${fN(orgP)}</td>
-          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);font-weight:700">${fN(qtdP)}</td>
-          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#059669;font-weight:600">${fR(valP)}</td>
-        </tr>`;
-      }).join('');
-      if(sub) sub.textContent=periodDays>0?`últimos ${periodDays}d`:'período total';
+    if(sub) sub.textContent=periodDays>0?`últimos ${periodDays}d`:'período total';
+    if(el){
+      if(!prods.length){el.innerHTML='<div style="padding:12px;color:var(--muted);font-size:12px">Sem vendas no período</div>';return;}
       el.innerHTML=`<table style="width:100%;border-collapse:collapse">
         <thead><tr style="background:var(--surface2)">
           <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;padding:6px 10px;text-align:left">Produto</th>
@@ -628,7 +635,13 @@ function renderOverview(){
           <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;padding:6px 10px;text-align:right">Total</th>
           <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#059669;font-weight:700;padding:6px 10px;text-align:right">Faturamento</th>
         </tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody>${prods.map(p=>`<tr>
+          <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 10px;border-bottom:1px solid var(--border)" title="${p.produto}">${p.produto}</td>
+          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#f97316">${fN(p.pago)}</td>
+          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#ea580c">${fN(p.org)}</td>
+          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);font-weight:700">${fN(p.total)}</td>
+          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#059669;font-weight:600">${fR(p.val)}</td>
+        </tr>`).join('')}</tbody>
       </table>`;
     }
   }
@@ -641,11 +654,17 @@ function renderMeta(){
   const roasReal=mk.spend>0?r2((hk?.total||0)/mk.spend):null;
 
   // Meta KPIs filtrados pelo período
-  const mdMK=getMD(); const hdMK=getHD();
+  const mdMK=getMD();
   const spMK=mdMK?.spend?.reduce((a,b)=>a+(b||0),0)||0;
   const purMK=mdMK?.purchase?.reduce((a,b)=>a+(b||0),0)||0;
-  const hotQtdMK=hdMK?.qtd?.reduce((a,b)=>a+(b||0),0)||0;
-  const hotValMK=hdMK?.valor?.reduce((a,b)=>a+(b||0),0)||0;
+  const rawMK=(HOT_RAW||[]).filter(r=>{
+    const dt=parseDayStr(r.d);
+    if(periodDays>0){const ini=new Date(getHoje());ini.setDate(ini.getDate()-(periodDays-1));ini.setHours(0,0,0,0);if(dt<ini||dt>getHoje())return false;}
+    if(dateI&&dt<dateI)return false; if(dateF&&dt>dateF)return false;
+    return true;
+  });
+  const hotQtdMK=rawMK.length;
+  const hotValMK=r2(rawMK.reduce((s,r)=>s+r.v,0));
   const roasMK=spMK>0&&hotValMK>0?r2(hotValMK/spMK):null;
   const cpaMK=spMK>0&&purMK>0?r2(spMK/purMK):null;
   document.getElementById('metaKpis').innerHTML=`
@@ -805,7 +824,7 @@ function toggleCampRow(id,rowEl){
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CPA</th>'+
       '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">ROAS</th>'+
       '</tr></thead><tbody>'+
-      adsets.map(a=>`<tr onclick="toggleAdsetRow('${id}','${a.n.replace(/'/g,"\'")}',this)" style="cursor:pointer">
+      adsets.map(a=>`<tr onclick="toggleAdsetRow('${id}','${a.n.replace(/'/g,"\'")}','${campName.replace(/'/g,"\'")}',this)" style="cursor:pointer">
         <td style="font-size:10px;padding:5px 8px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.n}">▶ ${a.n}</td>
         <td class="num" style="font-size:10px;padding:5px 8px">${fR(a.spend)}</td>
         <td class="num" style="font-size:10px;padding:5px 8px">${fN(a.pur)}</td>
@@ -823,7 +842,7 @@ function toggleCampRow(id,rowEl){
   }
 }
 
-function toggleAdsetRow(campId,adsetName,rowEl){
+function toggleAdsetRow(campId,adsetName,campName,rowEl){
   const key=adsetName.replace(/[^a-zA-Z0-9]/g,'_');
   const sub=document.getElementById('ads_'+campId+'_'+key);
   if(!sub) return;
@@ -833,7 +852,7 @@ function toggleAdsetRow(campId,adsetName,rowEl){
   if(arrow) arrow.textContent=(open?'▼':'▶')+' '+adsetName;
   if(open){
     const mt=getMT();
-    const ads=mt?.ads?.filter(a=>a.adset===adsetName)||[];
+    const ads=mt?.ads?.filter(a=>a.adset===adsetName&&a.camp===campName)||[];
     const inner=document.getElementById('ads_inner_'+campId+'_'+key);
     if(!inner) return;
     if(!ads.length){inner.innerHTML='<div style="padding:8px;font-size:10px;color:var(--muted)">Sem criativos</div>';return;}
@@ -875,7 +894,8 @@ function renderAds(ads){
 }
 
 function renderSeg(){
-  if(!META_BD) return;
+  const bd=getMBD();
+  if(!bd) return;
   function segTable(elId,data,lbl){
     const el=document.getElementById(elId);
     if(!data?.length){el.innerHTML='<div style="padding:8px;font-size:11px;color:var(--muted)">Sem dados</div>';return;}
@@ -887,9 +907,9 @@ function renderSeg(){
         <td class="num ${cpaCls(r.cpa)}">${fR(r.cpa)}</td>
       </tr>`).join('')}</tbody></table>`;
   }
-  segTable('tGender',  META_BD.gender,  'Gênero');
-  segTable('tAge',     META_BD.age,     'Faixa Etária');
-  segTable('tPlatform',META_BD.platform,'Posicionamento');
+  segTable('tGender',  bd.gender,  'Gênero');
+  segTable('tAge',     bd.age,     'Faixa Etária');
+  segTable('tPlatform',bd.platform,'Posicionamento');
 }
 
 // ═══ MÉTRICAS DIÁRIAS ═══
