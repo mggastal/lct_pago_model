@@ -36,7 +36,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 
 /* TOPBAR — sticky obrigatório */
 .main{display:flex;flex-direction:column;overflow-x:hidden;}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:9px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:var(--sh);gap:8px;flex-wrap:wrap;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:9px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;box-shadow:var(--sh);gap:8px;flex-wrap:wrap;}
 .topbar-l{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .page-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
 .live-badge{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
@@ -76,8 +76,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .funnel-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:16px;}
 .funnel-steps{display:flex;flex-direction:column;gap:0;}
 .f-step{display:flex;flex-direction:column;}
-.f-bar{height:40px;border-radius:7px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;transition:width .4s;}
+.f-bar{height:40px;border-radius:7px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;transition:width .4s;min-width:80px;}
 .f-bar-lbl{font-size:12px;font-weight:600;color:#fff;}
+.f-bar.narrow .f-bar-lbl,.f-bar.narrow .f-bar-val{color:#111;}
 .f-bar-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:#fff;}
 .f-between{display:flex;align-items:center;gap:8px;padding:4px 0 4px 12px;}
 .f-arrow{color:var(--muted2);font-size:14px;}
@@ -130,7 +131,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .as-v{font-size:11px;font-weight:700;font-family:'DM Mono',monospace;}
 
 /* SEG */
-.seg-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);}
+.seg-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);overflow-x:auto;}
 .seg-card table{width:100%;border-collapse:collapse;}
 .seg-card thead th{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;padding:7px 10px;background:var(--surface2);border-bottom:1px solid var(--border);}
 .seg-card thead th.num{text-align:right;}
@@ -142,7 +143,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .pizza-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:14px;}
 .pz-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px;box-shadow:var(--sh);}
 .pz-q{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:8px;line-height:1.4;}
-.pz-cw{height:160px;position:relative;}
+.pz-cw{height:160px;position:relative;min-height:160px;}
 .pz-leg{margin-top:6px;display:flex;flex-direction:column;gap:3px;}
 .pl{display:flex;align-items:center;gap:5px;font-size:10px;}
 .pl-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
@@ -167,11 +168,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 
 /* MOB */
 .mob-menu{display:none;width:34px;height:34px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:17px;align-items:center;justify-content:center;}
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:250;}
 .overlay.open{display:block;}
 @media(max-width:768px){
   .app{grid-template-columns:1fr;}
-  .sb{display:none;position:fixed;top:0;left:0;width:240px;height:100vh;z-index:200;}
+  .sb{display:none;position:fixed;top:0;left:0;width:240px;height:100vh;z-index:310;}
   .sb.open{display:flex;}
   .mob-menu{display:flex;}
   .content{padding:12px;overflow-x:hidden;}
@@ -266,10 +267,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
         <div class="sec-hd">Campanhas</div>
         <div class="tc" id="tCamps"></div>
       </div>
-      <div class="section">
-        <div class="sec-hd">Conjuntos de Anúncios</div>
-        <div class="tc" id="tAdsets"></div>
-      </div>
+
       <div class="section">
         <div class="sec-hd">Criativos</div>
         <div class="ads-grid" id="adsGrid"></div>
@@ -432,7 +430,7 @@ function buildFunnel(mk){
   let html='';
   steps.forEach((s,i)=>{
     html+=`<div class="f-step">
-      <div class="f-bar" style="width:${widths[i]}%;background:${s.color}">
+      <div class="f-bar${widths[i]<35?' narrow':''}" style="width:${widths[i]}%;background:${s.color}">
         <span class="f-bar-lbl">${s.lbl}</span>
         <span class="f-bar-val">${fN(s.val)}</span>
       </div>`;
@@ -460,18 +458,46 @@ function renderOverview(){
   if(!mk||!hk){console.warn('Overview: dados não prontos');return;}
   const roasReal=mk.spend>0?r2(hk.total/mk.spend):null;
 
+  // KPIs filtrados pelo período selecionado
+  const mdKpi=getMD(); const hdKpi=getHD();
+  const spendF=mdKpi?.spend?.reduce((a,b)=>a+(b||0),0)||0;
+  const purF=  mdKpi?.purchase?.reduce((a,b)=>a+(b||0),0)||0;
+  const hotQtdF=hdKpi?.qtd?.reduce((a,b)=>a+(b||0),0)||0;
+  const hotValF=hdKpi?.valor?.reduce((a,b)=>a+(b||0),0)||0;
+  const roasF=spendF>0&&hotValF>0?r2(hotValF/spendF):null;
+  const cpaF=spendF>0&&purF>0?r2(spendF/purF):null;
   document.getElementById('ovKpis').innerHTML=`
-    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Investimento</div><div class="kpi-val" style="font-size:16px">${fR(mk.spend)}</div><div class="kpi-sub">Meta Ads</div></div>
-    <div class="kpi" style="--kc:#059669"><div class="kpi-lbl">Faturamento</div><div class="kpi-val" style="font-size:16px;color:#059669">${fR(hk.total)}</div><div class="kpi-sub">Hotmart</div></div>
-    <div class="kpi" style="--kc:${roasCls(roasReal)==='cg'?'#059669':roasCls(roasReal)==='cw2'?'#d97706':'#dc2626'}">
-      <div class="kpi-lbl">ROAS</div><div class="kpi-val ${roasCls(roasReal)}">${roasReal!=null?roasReal.toFixed(2)+'x':'—'}</div>
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Investimento</div><div class="kpi-val" style="font-size:16px">${fR(spendF)}</div><div class="kpi-sub">Meta Ads</div></div>
+    <div class="kpi" style="--kc:#059669"><div class="kpi-lbl">Faturamento</div><div class="kpi-val" style="font-size:16px;color:#059669">${fR(hotValF)}</div><div class="kpi-sub">Hotmart</div></div>
+    <div class="kpi" style="--kc:${roasCls(roasF)==='cg'?'#059669':roasCls(roasF)==='cw2'?'#d97706':'#dc2626'}">
+      <div class="kpi-lbl">ROAS</div><div class="kpi-val ${roasCls(roasF)}">${roasF!=null?roasF.toFixed(2)+'x':'—'}</div>
       <div class="kpi-sub">Hotmart / Invest.</div></div>
-    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas</div><div class="kpi-val">${fN(hk.qtd)}</div><div class="kpi-sub">Hotmart</div></div>
-    <div class="kpi" style="--kc:${cpaCls(mk.cpa)==='cg'?'#059669':cpaCls(mk.cpa)==='cw2'?'#d97706':'#dc2626'}">
-      <div class="kpi-lbl">CPA</div><div class="kpi-val ${cpaCls(mk.cpa)}">${fR(mk.cpa)}</div>
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas</div><div class="kpi-val">${fN(hotQtdF)}</div><div class="kpi-sub">Hotmart</div></div>
+    <div class="kpi" style="--kc:${cpaCls(cpaF)==='cg'?'#059669':cpaCls(cpaF)==='cw2'?'#d97706':'#dc2626'}">
+      <div class="kpi-lbl">CPA</div><div class="kpi-val ${cpaCls(cpaF)}">${fR(cpaF)}</div>
       <div class="kpi-sub">Custo por venda</div></div>`;
 
-  setTimeout(()=>buildFunnel(mk),30);
+  // Recalcular funil a partir dos dados diários filtrados
+  const mdF=getMD();
+  if(mdF){
+    const funnelKpis={
+      impressions:mdF.impressions?.reduce((a,b)=>a+(b||0),0)||0,
+      link_clicks:mdF.link_clicks?.reduce((a,b)=>a+(b||0),0)||0,
+      page_view:  mdF.page_view?.reduce((a,b)=>a+(b||0),0)||0,
+      init_checkout:mdF.init_checkout?.reduce((a,b)=>a+(b||0),0)||0,
+      purchase:   mdF.purchase?.reduce((a,b)=>a+(b||0),0)||0,
+      spend:      mdF.spend?.reduce((a,b)=>a+(b||0),0)||0,
+    };
+    const sp2=funnelKpis.spend,imp2=funnelKpis.impressions,lc2=funnelKpis.link_clicks;
+    const pv2=funnelKpis.page_view,ic2=funnelKpis.init_checkout,pur2=funnelKpis.purchase;
+    funnelKpis.ctr=imp2>0?r2(lc2/imp2*100):null;
+    funnelKpis.connect_rate=lc2>0?r2(pv2/lc2*100):null;
+    funnelKpis.tx_ic=pv2>0?r2(ic2/pv2*100):null;
+    funnelKpis.tx_checkout=ic2>0?r2(pur2/ic2*100):null;
+    funnelKpis.tx_conv=pv2>0?r2(pur2/pv2*100):null;
+    funnelKpis.cpa=pur2>0?r2(sp2/pur2):null;
+    setTimeout(()=>buildFunnel(funnelKpis),30);
+  }
 
   const md=getMD(); const hd=getHD();
   if(md&&hd){
@@ -487,7 +513,7 @@ function renderOverview(){
         {label:'Vendas',data:vendas,backgroundColor:'rgba(249,115,22,.75)',borderRadius:3,type:'bar',yAxisID:'y1',
          datalabels:{...makeDatalabels('#f97316','',v=>v!=null?fN(v):null),display:ctx=>showLabels}},
         {label:'Invest.',data:md.spend,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line',spanGaps:true,datalabels:{display:false}},
-        {label:'CPV',data:cpv,borderColor:'#111',borderDash:[5,3],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:false}},
+        {label:'CPV',data:cpv,borderColor:'#111',borderDash:[5,3],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:ctx=>showLabels,color:'#333',font:{size:8,weight:'bold'},formatter:v=>v!=null?'R$'+v.toFixed(0):null,anchor:'end',align:'top',offset:2,clip:false}},
       ]},
       options:{...bo(),scales:{
         x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
@@ -521,14 +547,22 @@ function renderMeta(){
   if(!mk||!md) return;
   const roasReal=mk.spend>0?r2((hk?.total||0)/mk.spend):null;
 
+  // Meta KPIs filtrados pelo período
+  const mdMK=getMD(); const hdMK=getHD();
+  const spMK=mdMK?.spend?.reduce((a,b)=>a+(b||0),0)||0;
+  const purMK=mdMK?.purchase?.reduce((a,b)=>a+(b||0),0)||0;
+  const hotQtdMK=hdMK?.qtd?.reduce((a,b)=>a+(b||0),0)||0;
+  const hotValMK=hdMK?.valor?.reduce((a,b)=>a+(b||0),0)||0;
+  const roasMK=spMK>0&&hotValMK>0?r2(hotValMK/spMK):null;
+  const cpaMK=spMK>0&&purMK>0?r2(spMK/purMK):null;
   document.getElementById('metaKpis').innerHTML=`
-    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Investimento</div><div class="kpi-val" style="font-size:16px">${fR(mk.spend)}</div></div>
-    <div class="kpi" style="--kc:#059669"><div class="kpi-lbl">Faturamento</div><div class="kpi-val" style="font-size:16px;color:#059669">${fR(hk?.total)}</div></div>
-    <div class="kpi" style="--kc:${roasCls(roasReal)==='cg'?'#059669':roasCls(roasReal)==='cw2'?'#d97706':'#dc2626'}">
-      <div class="kpi-lbl">ROAS</div><div class="kpi-val ${roasCls(roasReal)}">${roasReal!=null?roasReal.toFixed(2)+'x':'—'}</div></div>
-    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Compras Meta</div><div class="kpi-val">${fN(mk.purchase)}</div></div>
-    <div class="kpi" style="--kc:${cpaCls(mk.cpa)==='cg'?'#059669':cpaCls(mk.cpa)==='cw2'?'#d97706':'#dc2626'}">
-      <div class="kpi-lbl">CPA</div><div class="kpi-val ${cpaCls(mk.cpa)}">${fR(mk.cpa)}</div></div>`;
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Investimento</div><div class="kpi-val" style="font-size:16px">${fR(spMK)}</div></div>
+    <div class="kpi" style="--kc:#059669"><div class="kpi-lbl">Faturamento</div><div class="kpi-val" style="font-size:16px;color:#059669">${fR(hotValMK)}</div></div>
+    <div class="kpi" style="--kc:${roasCls(roasMK)==='cg'?'#059669':roasCls(roasMK)==='cw2'?'#d97706':'#dc2626'}">
+      <div class="kpi-lbl">ROAS</div><div class="kpi-val ${roasCls(roasMK)}">${roasMK!=null?roasMK.toFixed(2)+'x':'—'}</div></div>
+    <div class="kpi" style="--kc:#334155"><div class="kpi-lbl">Vendas Hotmart</div><div class="kpi-val">${fN(hotQtdMK)}</div></div>
+    <div class="kpi" style="--kc:${cpaCls(cpaMK)==='cg'?'#059669':cpaCls(cpaMK)==='cw2'?'#d97706':'#dc2626'}">
+      <div class="kpi-lbl">CPA</div><div class="kpi-val ${cpaCls(cpaMK)}">${fR(cpaMK)}</div></div>`;
 
   dc('chMetaMain');
   CH['chMetaMain']=new Chart(document.getElementById('chMetaMain'),{
@@ -536,7 +570,7 @@ function renderMeta(){
       {label:'Vendas',data:md.purchase,backgroundColor:'rgba(59,130,246,.7)',borderRadius:3,type:'bar',yAxisID:'y1',
        datalabels:{...makeDatalabels('#3b82f6','',v=>v!=null?fN(v):null),display:ctx=>showLabels}},
       {label:'Invest.',data:md.spend,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line',spanGaps:true,datalabels:{display:false}},
-      {label:'CPA',data:md.cpa,borderColor:'#111',borderDash:[5,3],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:false}},
+      {label:'CPA',data:md.cpa,borderColor:'#111',borderDash:[5,3],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:ctx=>showLabels,color:'#333',font:{size:8,weight:'bold'},formatter:v=>v!=null?'R$'+v.toFixed(0):null,anchor:'end',align:'top',offset:2,clip:false}},
     ]},
     options:{...bo(),scales:{
       x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
@@ -547,7 +581,6 @@ function renderMeta(){
   });
 
   buildTable('tCamps', mt?.camps,'Campanha');
-  buildTable('tAdsets',mt?.adsets,'Conjunto');
   renderAds(mt?.ads);
   renderSeg();
 }
@@ -556,35 +589,85 @@ function getMT(){return filtroLct?META_TABLES?.lct:META_TABLES?.all;}
 
 function buildTable(elId,data,mainCol){
   if(!data?.length){document.getElementById(elId).innerHTML='<div style="padding:12px;color:var(--muted);font-size:12px">Sem dados</div>';return;}
-  const head=`<tr>
-    <th>${mainCol}</th><th class="num">Invest.</th><th class="num">Impr.</th>
-    <th class="num">Cliques</th><th class="num">PV</th><th class="num">Init CK</th>
-    <th class="num">Compras</th><th class="num">Receita*</th>
-    <th class="num">CTR</th><th class="num">C.Rate</th><th class="num">Tx.IC</th>
-    <th class="num">Tx.CK</th><th class="num">Tx.Conv</th>
-    <th class="num">CPA</th><th class="num">ROAS*</th>
-  </tr>`;
-  const rows=data.slice(0,30).map(r=>`<tr>
-    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${r.n}">${r.n}</td>
-    <td class="num">${fR(r.spend)}</td>
-    <td class="num" style="color:var(--muted2)">${fN(r.imp)}</td>
-    <td class="num" style="color:var(--muted2)">${fN(r.lc)}</td>
-    <td class="num" style="color:var(--muted2)">${fN(r.pv)}</td>
-    <td class="num" style="color:var(--muted2)">${fN(r.ic)}</td>
-    <td class="num">${fN(r.pur)}</td>
-    <td class="num">${fR(r.rev)}</td>
-    <td class="num">${fP(r.ctr)}</td>
-    <td class="num">${fP(r.cr)}</td>
-    <td class="num">${fP(r.tx_ic)}</td>
-    <td class="num">${fP(r.tx_ck)}</td>
-    <td class="num">${fP(r.tx_cv)}</td>
-    <td class="num ${cpaCls(r.cpa)}">${fR(r.cpa)}</td>
-    <td class="num ${roasCls(r.roas)}">${r.roas!=null?r.roas.toFixed(2)+'x':'—'}</td>
-  </tr>`).join('');
-  document.getElementById(elId).innerHTML=`<table>
+  // Buscar adsets agrupados por campanha do META_TABLES
+  const mt=getMT();
+  const adsetsByCamp={};
+  const adsByAdset={};
+  if(mt?.adsets) mt.adsets.forEach(a=>{
+    // adsets não tem campo camp, então agrupamos por nome parcial
+  });
+  
+  const COLS=[
+    {k:'spend',l:'Invest.',f:fR},{k:'imp',l:'Impr.',cls:'cn'},{k:'lc',l:'Cliques',cls:'cn'},
+    {k:'pv',l:'PV',cls:'cn'},{k:'ic',l:'Init CK',cls:'cn'},{k:'pur',l:'Compras',f:fN},
+    {k:'rev',l:'Receita*',f:fR},{k:'ctr',l:'CTR',f:fP},{k:'cr',l:'C.Rate',f:fP},
+    {k:'tx_cv',l:'Tx.Conv',f:fP},{k:'cpa',l:'CPA',f:fR,cls2:cpaCls},{k:'roas',l:'ROAS*',f:v=>v!=null?v.toFixed(2)+'x':'—',cls2:roasCls}
+  ];
+  const head='<tr><th></th><th>'+mainCol+'</th>'+COLS.map(c=>'<th class="num">'+c.l+'</th>').join('')+'</tr>';
+  
+  let rows='';
+  data.forEach((r,i)=>{
+    const cid='camp_'+elId+'_'+i;
+    const tds=COLS.map(c=>{
+      const v=r[c.k];
+      const cls2=c.cls2?c.cls2(v):'';
+      const cls=c.cls||'';
+      const fmt=c.f?c.f(v):fN(v);
+      return `<td class="num ${cls} ${cls2}" style="${cls==='cn'?'color:var(--muted2)':''}">${fmt}</td>`;
+    }).join('');
+    rows+=`<tr style="cursor:pointer" onclick="toggleCampRow('${cid}',this)">
+      <td style="width:20px;text-align:center;color:var(--muted2);font-size:11px" id="arrow_${cid}">▶</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600" title="${r.n}">${r.n}</td>
+      ${tds}
+    </tr>`;
+    // Sub-linhas: conjuntos desta campanha
+    const campAdsets=mt?.adsets?.filter(a=>a.n.includes(r.n.split('-').slice(-2).join('-'))||true)||[];
+    // Usar os anúncios agrupados por nome de campanha da tabela
+    const campName=r.n;
+    rows+=`<tr id="${cid}" style="display:none"><td colspan="${COLS.length+2}" style="padding:0">
+      <div style="background:var(--surface2);border-top:1px solid var(--border);padding:8px 24px">
+        <div style="font-size:10px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Conjuntos — ${campName}</div>
+        <table style="width:100%;border-collapse:collapse" id="sub_${cid}"></table>
+      </div>
+    </td></tr>`;
+  });
+  
+  document.getElementById(elId).innerHTML=`<table style="min-width:900px">
     <thead>${head}</thead><tbody>${rows}</tbody>
-    <tfoot><tr><td colspan="15" style="padding:6px 10px;font-size:9px;color:var(--muted2)">* Receita e ROAS estimados: compras × ticket médio Hotmart (referência de atribuição)</td></tr></tfoot>
+    <tfoot><tr><td colspan="${COLS.length+2}" style="padding:6px 10px;font-size:9px;color:var(--muted2)">* Receita e ROAS estimados: compras × ticket médio Hotmart</td></tr></tfoot>
   </table>`;
+}
+
+function toggleCampRow(id,rowEl){
+  const sub=document.getElementById(id);
+  const arrow=document.getElementById('arrow_'+id);
+  const open=sub.style.display==='none';
+  sub.style.display=open?'table-row':'none';
+  if(arrow) arrow.textContent=open?'▼':'▶';
+  if(open){
+    // Preencher conjuntos desta campanha
+    const campName=rowEl.querySelector('td:nth-child(2)').title||rowEl.querySelector('td:nth-child(2)').textContent;
+    const mt=getMT();
+    if(!mt?.adsets) return;
+    const adsets=mt.adsets; // mostrar todos (não temos campo campanha no adset ainda)
+    const tbl=document.getElementById('sub_'+id);
+    if(!tbl) return;
+    const SCOLS=[{k:'spend',f:fR},{k:'pur',f:fN},{k:'ctr',f:fP},{k:'tx_cv',f:fP},{k:'cpa',f:fR,cls2:cpaCls}];
+    tbl.innerHTML='<thead><tr><th style="font-size:9px;padding:4px 8px;text-align:left;color:var(--muted2)">Conjunto</th>'+
+      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Invest.</th>'+
+      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Compras</th>'+
+      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CTR</th>'+
+      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">Tx.Conv</th>'+
+      '<th class="num" style="font-size:9px;padding:4px 8px;color:var(--muted2)">CPA</th></tr></thead><tbody>'+
+      adsets.slice(0,10).map(a=>`<tr>
+        <td style="font-size:10px;padding:4px 8px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.n}</td>
+        <td class="num" style="font-size:10px;padding:4px 8px">${fR(a.spend)}</td>
+        <td class="num" style="font-size:10px;padding:4px 8px">${fN(a.pur)}</td>
+        <td class="num" style="font-size:10px;padding:4px 8px">${fP(a.ctr)}</td>
+        <td class="num" style="font-size:10px;padding:4px 8px">${fP(a.tx_cv)}</td>
+        <td class="num ${cpaCls(a.cpa)}" style="font-size:10px;padding:4px 8px">${fR(a.cpa)}</td>
+      </tr>`).join('')+'</tbody>';
+  }
 }
 
 function renderAds(ads){
@@ -594,6 +677,7 @@ function renderAds(ads){
     const img=ad.thumb?`<img src="${ad.thumb}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=ad-img-ph>🖼️</div>'">`:'<div class="ad-img-ph">🖼️</div>';
     return `<div class="ad-card"><div class="ad-img">${img}</div>
       <div class="ad-info"><div class="ad-name">${ad.n}</div>
+        <div style="font-size:9px;color:var(--muted2);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ad.camp||''}">${ad.camp?'📁 '+ad.camp.split('-').slice(-2).join('-'):''}</div>
         <div class="ad-stats">
           <div><div class="as-l">Vendas</div><div class="as-v">${fN(ad.pur)}</div></div>
           <div><div class="as-l">CPA</div><div class="as-v ${cpaCls(ad.cpa)}">${fR(ad.cpa)}</div></div>
@@ -633,7 +717,7 @@ function renderDiario(){
     {id:'tx_ic', ttl:'Tx. Init Checkout (%)', suffix:'%', data:()=>md.tx_ic},
     {id:'tx_ck', ttl:'Taxa Checkout (%)',     suffix:'%', data:()=>md.tx_checkout},
     {id:'tx_cv', ttl:'Taxa Conversão (%)',    suffix:'%', data:()=>md.tx_conv},
-    {id:'cpa',   ttl:'CPA (R$)',              suffix:'',  fmt:v=>v?'R$'+v.toFixed(0):null, data:()=>md.cpa},
+
   ];
   const el=document.getElementById('dailyCharts');
   el.innerHTML=METRICS.map(m=>`
@@ -851,6 +935,9 @@ function closeSb(){document.getElementById('sidebar').classList.remove('open');d
   document.getElementById('livePulse').style.background=COR_ACENTO;
   if(META_DAILY?.lct?.days?.length){
     const d=META_DAILY.lct.days; document.getElementById('liveTxt').textContent='Dados até '+d[d.length-1];
+    // Atualizar footer com data do gerador (vem como texto no span)
+    const sfEl=document.getElementById('sbAtual');
+    if(sfEl&&sfEl.textContent.includes('--')) sfEl.textContent='Atualizado '+d[d.length-1];
   }
   if(LANCAMENTO_COD){const lb2=document.getElementById('lctBar');if(lb2)lb2.style.display='flex';document.getElementById('btnLctOn').textContent=LANCAMENTO_COD;}
   renderOverview();
