@@ -36,7 +36,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 
 /* TOPBAR — sticky obrigatório */
 .main{display:flex;flex-direction:column;overflow-x:hidden;}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:9px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:9000;box-shadow:0 2px 8px rgba(0,0,0,.12);gap:8px;flex-wrap:wrap;will-change:transform;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:9px 20px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:210px;right:0;z-index:9000;box-shadow:0 2px 8px rgba(0,0,0,.12);gap:8px;flex-wrap:wrap;}
 .topbar-l{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .page-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
 .live-badge{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
@@ -56,7 +56,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .theme-btn{padding:4px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px;}
 
 /* CONTENT */
-.content{padding:18px 22px;flex:1;overflow-x:hidden;}
+.content{padding:18px 22px 18px 22px;flex:1;overflow-x:hidden;}
 .page-section{display:none;}
 .page-section.active{display:block;}
 
@@ -170,7 +170,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .mob-menu{display:none;width:34px;height:34px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:17px;align-items:center;justify-content:center;}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:250;}
 .overlay.open{display:block;}
-@media(max-width:768px){
+@media(max-width:768px){.topbar{left:0;right:0;}
+  .ov-bottom{grid-template-columns:1fr!important;}
+
   .app{grid-template-columns:1fr;}
   .sb{display:none;position:fixed;top:0;left:0;width:240px;height:100vh;z-index:310;}
   .sb.open{display:flex;}
@@ -217,6 +219,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
     </div>
     <div class="topbar-r">
       <div class="period-bar">
+        <button class="pb" onclick="setPeriod(1,this)">Ontem</button>
         <button class="pb" onclick="setPeriod(7,this)">7d</button>
         <button class="pb" onclick="setPeriod(14,this)">14d</button>
         <button class="pb active" onclick="setPeriod(30,this)">30d</button>
@@ -241,16 +244,23 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
     <div class="page-section active" id="page-overview">
       <div class="krow k5 mb14" id="ovKpis"></div>
       <div class="funnel-card"><div class="funnel-title">Funil de Conversão</div><div class="funnel-steps" id="funnelSteps"></div></div>
-      <div class="g73">
-        <div class="cc">
-          <div class="cc-t">Vendas Diárias (Hotmart) & Investimento</div>
-          <div class="cc-s">Vendas (barras laranja) · Invest. Meta (linha verde) · CPV (linha preta)</div>
-          <div class="cw" style="height:220px"><canvas id="chOvMain"></canvas></div>
-        </div>
+      <!-- Gráfico diário largura total -->
+      <div class="cc mb14">
+        <div class="cc-t">Vendas Diárias (Hotmart) & Investimento</div>
+        <div class="cc-s">Vendas (barras laranja) · Invest. Meta (linha verde) · CPV (linha preta)</div>
+        <div class="cw" style="height:230px"><canvas id="chOvMain"></canvas></div>
+      </div>
+      <!-- Origem (30%) + Produto (70%) -->
+      <div style="display:grid;grid-template-columns:3fr 7fr;gap:12px;margin-bottom:14px;">
         <div class="cc">
           <div class="cc-t">Vendas por Origem</div>
           <div class="cc-s">Tráfego Pago vs Orgânico</div>
-          <div class="cw" style="height:220px"><canvas id="chOvOrigem"></canvas></div>
+          <div class="cw" style="height:180px"><canvas id="chOvOrigem"></canvas></div>
+        </div>
+        <div class="cc">
+          <div class="cc-t">Vendas por Produto</div>
+          <div class="cc-s" id="ccProdutoSub">por origem</div>
+          <div id="tPorProduto"></div>
         </div>
       </div>
     </div>
@@ -319,6 +329,7 @@ const META_KPIS        = null;
 const META_DAILY       = null;
 const META_DAILY_CAMPS = null;
 const META_TABLES      = null;
+const DATA_GERACAO     = null;
 const META_BD      = null;
 const HOT_KPIS     = null;
 const HOT_DAILY    = null;
@@ -356,20 +367,52 @@ const bf={family:"'DM Sans',sans-serif",size:10};
 function getMK(){return filtroLct?META_KPIS?.lct:META_KPIS?.all;}
 function getMDraw(){return filtroLct?META_DAILY?.lct:META_DAILY?.all;}
 
+// Data de referência = data de geração do relatório (Brasília)
+function getHoje(){
+  if(DATA_GERACAO && DATA_GERACAO !== 'null'){
+    const [y,m,d] = DATA_GERACAO.split('-');
+    return new Date(parseInt(y), parseInt(m)-1, parseInt(d));
+  }
+  return new Date(); // fallback: hoje local
+}
+
+// Converte "dd/mm" do array de dias para Date usando ano correto
+function parseDayStr(s){
+  const[dd,mm]=s.split('/');
+  const hoje=getHoje();
+  // Determinar ano: se mm > mês atual, provavelmente ano anterior
+  let year=hoje.getFullYear();
+  const mesStr=parseInt(mm);
+  const mesHoje=hoje.getMonth()+1;
+  // Se o mês do dado é maior que o mês de hoje, é do ano anterior
+  if(mesStr > mesHoje + 1) year--;
+  return new Date(year, mesStr-1, parseInt(dd));
+}
+
 function applyPeriod(daily){
   if(!daily) return null;
   const days=daily.days; if(!days?.length) return daily;
+  const hoje=getHoje();
   let idxs=days.map((_,i)=>i);
-  if(periodDays>0) idxs=idxs.slice(-Math.min(periodDays,days.length));
-  if(dateI||dateF){
-    const year=new Date().getFullYear();
+
+  if(periodDays>0){
+    // Filtrar pelos últimos N dias A PARTIR DA DATA DE GERAÇÃO
+    const inicio=new Date(hoje);
+    inicio.setDate(inicio.getDate()-(periodDays-1));
+    inicio.setHours(0,0,0,0);
     idxs=idxs.filter(i=>{
-      const[dd,mm]=days[i].split('/');
-      // Usar construtor local (sem UTC) para evitar bug de timezone
-      const dt=new Date(year,parseInt(mm)-1,parseInt(dd));
+      const dt=parseDayStr(days[i]);
+      return dt>=inicio && dt<=hoje;
+    });
+  }
+
+  if(dateI||dateF){
+    idxs=idxs.filter(i=>{
+      const dt=parseDayStr(days[i]);
       return(!dateI||dt>=dateI)&&(!dateF||dt<=dateF);
     });
   }
+
   const out={};
   Object.keys(daily).forEach(k=>{out[k]=idxs.map(i=>daily[k][i]);});
   return out;
@@ -524,16 +567,28 @@ function renderOverview(){
       options:{...bo(),scales:{
         x:{ticks:{color:TXT(),font:bf,maxTicksLimit:14},grid:{color:GRID()}},
         y:{ticks:{color:TXT(),font:bf,callback:v=>'R$'+v.toLocaleString()},grid:{color:GRID()}},
-        y1:{position:'right',ticks:{color:'#f97316',font:bf},grid:{display:false}},
+        y1:{position:'right',ticks:{color:'#f97316',font:bf},grid:{display:false},grace:'20%'},
         y2:{position:'right',ticks:{color:'#555',font:bf,callback:v=>'R$'+v.toFixed(0)},grid:{display:false},offset:true},
       }}
     });
   }
 
-  if(hk){
+  // Origem e produto filtrados pelo período (usar HOT_DAILY filtrado)
+  {
+    const hdF=getHD(); // já filtrado pelo período
+    // Recalcular pago/orgânico do período via HOT_DAILY não é possível (não temos breakdown diário)
+    // Usar HOT_KPIS para pago/orgânico (total) mas qtd filtrada pelo período
+    const hotQtdPeriodo=hdF?.qtd?.reduce((a,b)=>a+(b||0),0)||0;
+    const hotValPeriodo=hdF?.valor?.reduce((a,b)=>a+(b||0),0)||0;
+    // Proporção: usar a proporção total do hk aplicada ao período
+    const propPago=hk&&hk.qtd>0?hk.pago_qtd/hk.qtd:0;
+    const propOrg =hk&&hk.qtd>0?hk.org_qtd/hk.qtd:0;
+    const pagoPeriodo=Math.round(hotQtdPeriodo*propPago);
+    const orgPeriodo =Math.round(hotQtdPeriodo*propOrg);
+
     dc('chOvOrigem');
     const labels=['Tráfego Pago','Orgânico'];
-    const vals=[hk.pago_qtd,hk.org_qtd];
+    const vals=[pagoPeriodo, orgPeriodo];
     CH['chOvOrigem']=new Chart(document.getElementById('chOvOrigem'),{
       type:'doughnut',
       data:{labels,datasets:[{data:vals,backgroundColor:['#f97316','#ea580c'],borderWidth:0}]},
@@ -544,6 +599,37 @@ function renderOverview(){
             return t>0?fN(v)+'\n'+(v/t*100).toFixed(0)+'%':null;}}
       }}
     });
+
+    // Tabela por produto — proporção do período
+    const el=document.getElementById('tPorProduto');
+    const sub=document.getElementById('ccProdutoSub');
+    if(el&&hk?.por_produto?.length){
+      const fatorPeriodo=hk.qtd>0?hotQtdPeriodo/hk.qtd:1;
+      const rows=hk.por_produto.map(p=>{
+        const qtdP=Math.round(p.total_qtd*fatorPeriodo);
+        const pagoP=Math.round(p.pago_qtd*fatorPeriodo);
+        const orgP =Math.round(p.org_qtd*fatorPeriodo);
+        const valP =r2(p.total_val*fatorPeriodo);
+        return `<tr>
+          <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 10px;border-bottom:1px solid var(--border)" title="${p.produto}">${p.produto}</td>
+          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#f97316">${fN(pagoP)}</td>
+          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#ea580c">${fN(orgP)}</td>
+          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);font-weight:700">${fN(qtdP)}</td>
+          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#059669;font-weight:600">${fR(valP)}</td>
+        </tr>`;
+      }).join('');
+      if(sub) sub.textContent=periodDays>0?`últimos ${periodDays}d`:'período total';
+      el.innerHTML=`<table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:var(--surface2)">
+          <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;padding:6px 10px;text-align:left">Produto</th>
+          <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#f97316;font-weight:700;padding:6px 10px;text-align:right">Pago</th>
+          <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#ea580c;font-weight:700;padding:6px 10px;text-align:right">Orgânico</th>
+          <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;padding:6px 10px;text-align:right">Total</th>
+          <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#059669;font-weight:700;padding:6px 10px;text-align:right">Faturamento</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    }
   }
 }
 
@@ -591,7 +677,27 @@ function renderMeta(){
   renderSeg();
 }
 
-function getMT(){return filtroLct?META_TABLES?.lct:META_TABLES?.all;}
+function getPeriodKey(){
+  // Mapeia periodDays para chave do objeto META_TABLES
+  if(dateI||dateF) return null; // datas livres = usar "all" e filtrar no front (não pré-calculado)
+  if(periodDays===1)  return '1';
+  if(periodDays===7)  return '7';
+  if(periodDays===14) return '14';
+  if(periodDays===30) return '30';
+  return 'all';
+}
+function getMT(){
+  const base=filtroLct?META_TABLES?.lct:META_TABLES?.all;
+  if(!base) return null;
+  const key=getPeriodKey();
+  if(!key) return base['all']||base['30']||null; // fallback para datas livres
+  return base[key]||base['all']||null;
+}
+function getMBD(){
+  if(!META_BD) return null;
+  const key=getPeriodKey()||'all';
+  return META_BD[key]||META_BD['all']||null;
+}
 
 function buildTable(elId,data,mainCol){
   if(!data?.length){document.getElementById(elId).innerHTML='<div style="padding:12px;color:var(--muted);font-size:12px">Sem dados</div>';return;}
@@ -787,13 +893,23 @@ function renderSeg(){
 let campFilterActive=null; // null = tudo
 
 function buildCampFilter(){
-  const mt=getMT();
-  if(!mt?.camps?.length) return;
   const el=document.getElementById('campFilter');
   if(!el) return;
-  const camps=[...new Set(mt.camps.map(c=>c.n))];
-  el.innerHTML='<button class="pb active" onclick="setCampFilter(null,this)">Tudo</button>'+
-    camps.map(c=>`<button class="pb" onclick="setCampFilter('${c.replace(/'/g,"\'")}',this)" title="${c}">${c.split('-').slice(-2).join('-')}</button>`).join('');
+  // Usar META_DAILY_CAMPS para mostrar só campanhas com dados no período atual
+  const dcBase=filtroLct?META_DAILY_CAMPS?.lct:META_DAILY_CAMPS?.all;
+  let camps=[];
+  if(dcBase){
+    camps=Object.keys(dcBase).filter(camp=>{
+      const cd=applyPeriod(dcBase[camp]);
+      return cd?.spend?.some(v=>v>0);
+    });
+  } else {
+    const mt=getMT();
+    camps=mt?.camps?.map(c=>c.n)||[];
+  }
+  if(!camps.length) return;
+  el.innerHTML='<button class="pb active" onclick="setCampFilter(null,this)" style="font-size:10px">Todas</button>'+
+    camps.map(c=>`<button class="pb" onclick="setCampFilter('${c.replace(/'/g,"\'")}',this)" title="${c}" style="font-size:10px;white-space:normal;text-align:left;height:auto;padding:4px 8px;margin-bottom:2px">${c}</button>`).join('');
 }
 
 function setCampFilter(camp,btn){
@@ -803,15 +919,16 @@ function setCampFilter(camp,btn){
   renderDiario();
 }
 
-function getDailyFiltered(){
-  const md=getMD(); if(!md) return null;
-  if(!campFilterActive) return md;
-  // Filtrar pelo daily da campanha específica
-  const mt=getMT();
-  if(!mt?.camps) return md;
-  // Não temos daily por campanha separado — usar os dados globais com nota
-  // Para implementação completa precisaria de META_DAILY por campanha no gerador
-  return md;
+
+
+function getDailyForCamp(){
+  const md=getMD(); if(!md) return md;
+  if(!campFilterActive||!META_DAILY_CAMPS) return md;
+  const base=filtroLct?META_DAILY_CAMPS?.lct:META_DAILY_CAMPS?.all;
+  if(!base) return md;
+  const cd=base[campFilterActive];
+  if(!cd) return md;
+  return applyPeriod(cd);
 }
 
 function renderDiario(){
@@ -830,7 +947,6 @@ function renderDiarioCharts(){
     {id:'tx_ic', ttl:'Tx. Init Checkout (%)', suffix:'%', data:()=>md.tx_ic},
     {id:'tx_ck', ttl:'Taxa Checkout (%)',     suffix:'%', data:()=>md.tx_checkout},
     {id:'tx_cv', ttl:'Taxa Conversão (%)',    suffix:'%', data:()=>md.tx_conv},
-
   ];
   const el=document.getElementById('dailyCharts');
   el.innerHTML=METRICS.map(m=>`
@@ -973,12 +1089,11 @@ function setPeriod(days,btn){
 }
 
 document.getElementById('dtI').addEventListener('change',e=>{
-  // new Date(string) é UTC — usar construtor local
-  if(e.target.value){const[y,m,d]=e.target.value.split('-');dateI=new Date(y,m-1,d);}else dateI=null; periodDays=0;
+  if(e.target.value){const[y,m,d]=e.target.value.split('-').map(Number);dateI=new Date(y,m-1,d,0,0,0);}else dateI=null; periodDays=0;
   document.querySelectorAll('.period-bar .pb').forEach(b=>b.classList.remove('active')); rerenderActive();
 });
 document.getElementById('dtF').addEventListener('change',e=>{
-  if(e.target.value){const[y,m,d]=e.target.value.split('-');dateF=new Date(y,m-1,d,23,59,59);}else dateF=null; periodDays=0;
+  if(e.target.value){const[y,m,d]=e.target.value.split('-').map(Number);dateF=new Date(y,m-1,d,23,59,59);}else dateF=null; periodDays=0;
   document.querySelectorAll('.period-bar .pb').forEach(b=>b.classList.remove('active')); rerenderActive();
 });
 function clearDates(){
@@ -1036,6 +1151,18 @@ function toggleTheme(){
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('open');}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('open');}
 
+// ═══ TOPBAR OFFSET ═══
+function ajustarPaddingContent(){
+  const tb=document.querySelector('.topbar');
+  const ct=document.querySelector('.content');
+  if(tb&&ct){
+    const h=tb.getBoundingClientRect().height;
+    ct.style.paddingTop=(h+12)+'px';
+  }
+}
+window.addEventListener('load', ajustarPaddingContent);
+window.addEventListener('resize', ajustarPaddingContent);
+
 // ═══ INIT ═══
 (function(){
   const lb=document.getElementById('logoBox');
@@ -1055,6 +1182,7 @@ function closeSb(){document.getElementById('sidebar').classList.remove('open');d
   }
   if(LANCAMENTO_COD){const lb2=document.getElementById('lctBar');if(lb2)lb2.style.display='flex';document.getElementById('btnLctOn').textContent=LANCAMENTO_COD;}
   renderOverview();
+  setTimeout(ajustarPaddingContent, 100);
 })();
 </script>
 </body>
