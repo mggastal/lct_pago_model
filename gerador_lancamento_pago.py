@@ -35,13 +35,15 @@ URL_GA   = sheet_url("breakdown-gender-age")
 URL_PT   = sheet_url("breakdown-platform")
 
 def to_num(s):
-    # Se já é numérico, não converter (evita remover pontos decimais)
+    """Converte série para numérico — detecta formato BR (1.234,56) ou US (1234.56)"""
     if pd.api.types.is_numeric_dtype(s):
         return s.fillna(0)
-    return pd.to_numeric(
-        s.astype(str).str.replace("R$","",regex=False)
-         .str.replace(".","",regex=False).str.replace(",",".",regex=False).str.strip(),
-        errors="coerce").fillna(0)
+    clean = s.astype(str).str.strip().str.replace("R$","",regex=False).str.strip()
+    # Formato BR: tem vírgula como decimal (ex: "29,9" ou "1.234,56")
+    if clean.str.contains(r"\d,\d", regex=True).any():
+        clean = clean.str.replace(".","",regex=False).str.replace(",",".",regex=False)
+    # Formato US ou sem separador: usar direto (não remover pontos)
+    return pd.to_numeric(clean, errors="coerce").fillna(0)
 def safe(v):
     if v is None or (isinstance(v,float) and pd.isna(v)): return None
     return round(float(v),2) if float(v)!=0 else None
@@ -62,24 +64,34 @@ def download_thumb(url, d):
 def load_hotmart():
     print("  Lendo hotmart...")
     df=pd.read_csv(URL_HOT)
-    df["date"]=pd.to_datetime(df["Data"],errors="coerce")
-    df["valor"]=pd.to_numeric(df["Valor bruto"],errors="coerce").fillna(0)
-    df=df[df["Status"].isin(["COMPLETE","APPROVED","complete","approved"])]
+    # Nome da coluna de data pode variar no CSV do Sheets
+    date_col = next((c for c in df.columns if c.lower() in ["data","date","data de compra"]), df.columns[1])
+    df["date"]=pd.to_datetime(df[date_col],errors="coerce")
+    # Nome da coluna de valor
+    valor_col = next((c for c in df.columns if "valor" in c.lower() and "bruto" in c.lower()), "Valor bruto")
+    df["valor"]=pd.to_numeric(df[valor_col],errors="coerce").fillna(0)
+    # Status
+    status_col = next((c for c in df.columns if "status" in c.lower()), "Status")
+    df=df[df[status_col].isin(["COMPLETE","APPROVED","complete","approved"])]
+    prod_col = next((c for c in df.columns if "produto" in c.lower()), "Produto")
     if PRODUTOS_HOTMART and PRODUTOS_HOTMART != ["ALL"]:
-        df=df[df["Produto"].str.contains("|".join(PRODUTOS_HOTMART),na=False,case=False)]
+        df=df[df[prod_col].str.contains("|".join(PRODUTOS_HOTMART),na=False,case=False)]
     print(f"     {len(df)} vendas | R$ {df['valor'].sum():,.2f}")
     return df
 
 def hotmart_process(df):
     total=df["valor"].sum(); qtd=len(df)
     ticket=round(float(total/qtd),2) if qtd>0 else 0
-    pago=df[df["Organico ou Pago"]=="Tráfego Pago"]
-    org =df[df["Organico ou Pago"]=="Orgânico"]
+    orig_col=next((c for c in df.columns if "organico" in c.lower() or "orgânico" in c.lower() or "pago" in c.lower()), "Organico ou Pago")
+    pago=df[df[orig_col].str.contains("Pago",na=False,case=False)]
+    org =df[df[orig_col].str.contains("Orgân",na=False,case=False)]
     # Vendas por produto (pago vs orgânico)
     por_produto=[]
-    for prod, gdf in df.groupby("Produto"):
-        p_pago=gdf[gdf["Organico ou Pago"]=="Tráfego Pago"]
-        p_org =gdf[gdf["Organico ou Pago"]=="Orgânico"]
+    prod_col2=next((c for c in df.columns if "produto" in c.lower()), "Produto")
+    orig_col2=next((c for c in df.columns if "organico" in c.lower() or "orgânico" in c.lower() or "pago" in c.lower()), "Organico ou Pago")
+    for prod, gdf in df.groupby(prod_col2):
+        p_pago=gdf[gdf[orig_col2].str.contains("Pago",na=False,case=False)]
+        p_org =gdf[gdf[orig_col2].str.contains("Orgân",na=False,case=False)]
         por_produto.append({
             "produto": str(prod),
             "total_qtd": int(len(gdf)),
