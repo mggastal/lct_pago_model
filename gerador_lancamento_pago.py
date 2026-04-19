@@ -26,7 +26,6 @@ CPA_MEDIO        = 80
 ROAS_BOM         = 1.0
 ROAS_MEDIO       = 0.6
 
-
 # ══════════════════════════════════════════════════════
 def sheet_url(t): return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={t}"
 URL_META = sheet_url("meta-ads")
@@ -152,6 +151,15 @@ def build_daily(p, ticket):
 def meta_daily(df, ticket):
     return {"lct":build_daily(df[df["is_lct"]],ticket),"all":build_daily(df,ticket)}
 
+def meta_daily_camps(df, ticket):
+    """Daily por campanha para filtro nas métricas diárias"""
+    result={"lct":{},"all":{}}
+    for key,subset in [("lct",df[df["is_lct"]]),("all",df)]:
+        for camp in subset["campaign"].unique():
+            p=subset[subset["campaign"]==camp]
+            result[key][camp]=build_daily(p,ticket)
+    return result
+
 def build_rows(agg, col, ticket):
     rows=[]
     for _,r in agg.sort_values("purchase",ascending=False).iterrows():
@@ -208,7 +216,7 @@ def meta_tables(df, img_dir, ticket):
             sp=float(r["spend"]); imp=float(r["impressions"]); lc=float(r["link_clicks"]); pur=float(r["purchase"])
             ads.append({"n":str(r["ad"]),"adset":str(r["adset"]),"camp":str(r["campaign"]),
                 "thumb":download_thumb(str(r["thumb"]),img_dir),
-                "spend":round(sp,2),"pur":int(pur),
+                "spend":round(sp,2),"pur":int(pur),"imp":int(imp),"lc":int(lc),
                 "ctr":round(lc/imp*100,2) if imp>0 else None,
                 "cpa":round(sp/pur,2) if pur>0 else None})
         return ads
@@ -289,11 +297,12 @@ def replace_js_const(html, name, value):
     if count==0: print(f"  AVISO: não encontrou const {name}")
     return new_html
 
-def inject_all(tpl, meta_k, meta_d, meta_t, meta_bd, hot_k, hot_d, pes, ticket):
+def inject_all(tpl, meta_k, meta_d, meta_dc, meta_t, meta_bd, hot_k, hot_d, pes, ticket):
     html=Path(tpl).read_text(encoding="utf-8")
     html=replace_js_const(html,"META_KPIS",    meta_k)
-    html=replace_js_const(html,"META_DAILY",   meta_d)
-    html=replace_js_const(html,"META_TABLES",  meta_t)
+    html=replace_js_const(html,"META_DAILY",       meta_d)
+    html=replace_js_const(html,"META_DAILY_CAMPS", meta_dc)
+    html=replace_js_const(html,"META_TABLES",      meta_t)
     html=replace_js_const(html,"META_BD",      meta_bd)
     html=replace_js_const(html,"HOT_KPIS",     hot_k)
     html=replace_js_const(html,"HOT_DAILY",    hot_d)
@@ -324,6 +333,7 @@ def main():
     df_meta=load_meta()
     m_k=meta_kpis(df_meta,ticket)
     m_d=meta_daily(df_meta,ticket)
+    m_dc=meta_daily_camps(df_meta,ticket)
     m_t=meta_tables(df_meta,img_dir,ticket)
     m_bd=meta_breakdowns(df_meta)
     print(f"  ✓ {len(m_t['lct']['camps'])} camps | {len(m_t['lct']['adsets'])} adsets | {len(m_t['lct']['ads'])} ads")
@@ -336,7 +346,7 @@ def main():
     print("\n[HTML]")
     if not Path(TEMPLATE_FILE).exists():
         print(f"  ERRO: {TEMPLATE_FILE} não encontrado"); return
-    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_t,m_bd,hot_k,hot_d,pes,ticket)
+    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_t,m_bd,hot_k,hot_d,pes,ticket)
     Path(OUTPUT_FILE).write_text(html,encoding="utf-8")
     print(f"  ✓ {OUTPUT_FILE} ({len(html)//1024}KB)")
 
