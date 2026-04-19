@@ -26,6 +26,7 @@ CPA_MEDIO        = 80
 ROAS_BOM         = 1.0
 ROAS_MEDIO       = 0.6
 
+
 # ══════════════════════════════════════════════════════
 def sheet_url(t): return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={t}"
 URL_META = sheet_url("meta-ads")
@@ -156,7 +157,7 @@ def build_rows(agg, col, ticket):
     for _,r in agg.sort_values("purchase",ascending=False).iterrows():
         sp=float(r["spend"]); imp=float(r["impressions"]); lc=float(r["link_clicks"])
         pv=float(r["page_view"]); ic=float(r["init_checkout"]); pur=float(r["purchase"])
-        rev=pur*ticket
+        rev=float(r.get("revenue_meta",0) or pur*ticket)  # usa Action Value se disponível
         rows.append({"n":str(r[col]),"spend":round(sp,2),"imp":int(imp),"lc":int(lc),
             "pv":int(pv),"ic":int(ic),"pur":int(pur),"rev":round(rev,2),
             "ctr":round(lc/imp*100,2) if imp>0 else None,
@@ -173,8 +174,30 @@ def meta_tables(df, img_dir, ticket):
     def ag(p,col):
         return p.groupby(col).agg(spend=("spend","sum"),impressions=("impressions","sum"),
             link_clicks=("link_clicks","sum"),page_view=("page_view","sum"),
-            init_checkout=("init_checkout","sum"),purchase=("purchase","sum")).reset_index()
+            init_checkout=("init_checkout","sum"),purchase=("purchase","sum"),
+            revenue_meta=("revenue_meta","sum")).reset_index()
     def make(p,col): return build_rows(ag(p,col),col,ticket)
+    def make_adsets(p):
+        agg2=p.groupby(["campaign","adset"]).agg(spend=("spend","sum"),impressions=("impressions","sum"),
+            link_clicks=("link_clicks","sum"),page_view=("page_view","sum"),
+            init_checkout=("init_checkout","sum"),purchase=("purchase","sum"),
+            revenue_meta=("revenue_meta","sum")).reset_index()
+        rows=[]
+        for _,r in agg2.sort_values("purchase",ascending=False).iterrows():
+            sp=float(r["spend"]); imp=float(r["impressions"]); lc=float(r["link_clicks"])
+            pv=float(r["page_view"]); ic=float(r["init_checkout"]); pur=float(r["purchase"])
+            rev=float(r.get("revenue_meta",0) or pur*ticket)
+            rows.append({"n":str(r["adset"]),"camp":str(r["campaign"]),"spend":round(sp,2),
+                "imp":int(imp),"lc":int(lc),"pv":int(pv),"ic":int(ic),"pur":int(pur),"rev":round(rev,2),
+                "ctr":round(lc/imp*100,2) if imp>0 else None,
+                "cr": round(pv/lc*100,2)  if lc>0 else None,
+                "tx_ic":round(ic/pv*100,2) if pv>0 else None,
+                "tx_ck":round(pur/ic*100,2) if ic>0 else None,
+                "tx_cv":round(pur/pv*100,2) if pv>0 else None,
+                "cpa":round(sp/pur,2) if pur>0 else None,
+                "roas":round(rev/sp,2) if sp>0 else None,
+                "cpm":round(sp/imp*1000,2) if imp>0 else None})
+        return rows
     def make_ads(p):
         df_t=p[p["thumb"].notna()&(p["thumb"].astype(str)!="nan")].copy()
         if df_t.empty: return []
@@ -190,8 +213,8 @@ def meta_tables(df, img_dir, ticket):
                 "cpa":round(sp/pur,2) if pur>0 else None})
         return ads
     lct=df[df["is_lct"]]
-    return {"lct":{"camps":make(lct,"campaign"),"adsets":make(lct,"adset"),"ads":make_ads(lct)},
-            "all":{"camps":make(df,"campaign"),"adsets":make(df,"adset"),"ads":make_ads(df)}}
+    return {"lct":{"camps":make(lct,"campaign"),"adsets":make_adsets(lct),"ads":make_ads(lct)},
+            "all":{"camps":make(df,"campaign"),"adsets":make_adsets(df),"ads":make_ads(df)}}
 
 def meta_breakdowns(df):
     print("  Lendo breakdowns...")
