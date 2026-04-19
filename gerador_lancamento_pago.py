@@ -111,7 +111,20 @@ def hotmart_process(df):
     daily={"days":[r["date"].strftime("%d/%m") for _,r in agg.iterrows()],
            "qtd": [int(r["qtd"]) for _,r in agg.iterrows()],
            "valor":[round(float(r["valor"]),2) for _,r in agg.iterrows()]}
-    return kpis, daily
+    # Raw por linha — para filtro de período e produto correto no JS
+    _pc = prod_col2 if 'prod_col2' in vars() else next((c for c in df.columns if "produto" in c.lower()),"Produto")
+    _oc = orig_col2 if 'orig_col2' in vars() else next((c for c in df.columns if "organico" in c.lower() or "orgân" in c.lower() or "pago" in c.lower()),"Organico ou Pago")
+    raw = []
+    for _, r in df.iterrows():
+        d = r["date"]
+        if pd.isna(d): continue
+        raw.append({
+            "d": d.strftime("%d/%m"),
+            "p": str(r[_pc]),
+            "v": round(float(r["valor"]),2),
+            "t": str(r[_oc])
+        })
+    return kpis, daily, raw
 
 # ══ META ADS ══════════════════════════════════════════
 def load_meta():
@@ -253,20 +266,22 @@ def meta_tables_period(df, p, img_dir, ticket):
     return {"camps":make(p,"campaign"),"adsets":make_adsets(p),"ads":make_ads(p)}
 
 def meta_tables(df, img_dir, ticket):
-    """Exporta tabelas por período: 1d,7d,14d,30d,all"""
-    last=df["date"].max()
+    """Exporta tabelas por período: 1d,7d,14d,30d,all — baseado na data de geração"""
+    from datetime import timezone, timedelta
+    hoje=pd.Timestamp(date.today())  # data de geração como referência
     result={"lct":{},"all":{}}
     periods={"1":1,"7":7,"14":14,"30":30,"all":0}
     for key,subset in [("lct",df[df["is_lct"]]),("all",df)]:
         for pname,n in periods.items():
-            p=subset[subset["date"]>=last-pd.Timedelta(days=n-1)] if n>0 else subset
+            p=subset[subset["date"]>=hoje-pd.Timedelta(days=n-1)] if n>0 else subset
             result[key][pname]=meta_tables_period(df,p,img_dir,ticket)
             print(f"     [{key}][{pname}]: {len(result[key][pname]['camps'])} camps")
     return result
 
 def meta_breakdowns(df):
     print("  Lendo breakdowns...")
-    last=df[df["is_lct"]]["date"].max()
+    hoje_bd=pd.Timestamp(date.today())  # referência = data de geração
+    last=hoje_bd  # usar hoje como limite superior
     AGE_ORDER=["18-24","25-34","35-44","45-54","55-64","65+"]
     def seg(agg,dim):
         agg=agg[agg["spend"]>0].copy()
@@ -293,9 +308,9 @@ def meta_breakdowns(df):
     result={}
     for pname,n in [("1",1),("7",7),("14",14),("30",30),("all",0)]:
         if n>0:
-            start=last-pd.Timedelta(days=n-1)
-            pga=df_ga[df_ga["date"]>=start] if len(df_ga)>0 else df_ga
-            ppt=df_pt[df_pt["date"]>=start] if len(df_pt)>0 else df_pt
+            start=hoje_bd-pd.Timedelta(days=n-1)
+            pga=df_ga[(df_ga["date"]>=start)&(df_ga["date"]<=hoje_bd)] if len(df_ga)>0 else df_ga
+            ppt=df_pt[(df_pt["date"]>=start)&(df_pt["date"]<=hoje_bd)] if len(df_pt)>0 else df_pt
         else:
             pga=df_ga; ppt=df_pt
         if len(pga)>0:
@@ -346,12 +361,17 @@ def pesquisa_process(df, hot_qtd):
 # ══ INJEÇÃO ════════════════════════════════════════════
 def replace_js_const(html, name, value):
     pattern=rf"const {name}\s*=\s*(?:null|true|false|-?\d[\d\.]*|'[^']*'|\"[^\"]*\"|\{{[\s\S]*?\}}|\[[\s\S]*?\])\s*;"
-    repl=f"const {name} = {json.dumps(value,ensure_ascii=False)};"
-    new_html,count=re.subn(pattern,repl,html,count=1)
-    if count==0: print(f"  AVISO: não encontrou const {name}")
+    replacement=f"const {name} = {json.dumps(value,ensure_ascii=False)};"
+    # Usar lambda para evitar interpretação de \ no replacement
+    found=[0]
+    def do_replace(m):
+        found[0]+=1
+        return replacement
+    new_html=re.sub(pattern,do_replace,html,count=1)
+    if not found[0]: print(f"  AVISO: não encontrou const {name}")
     return new_html
 
-def inject_all(tpl, meta_k, meta_d, meta_dc, meta_t, meta_bd, hot_k, hot_d, pes, ticket):
+def inject_all(tpl, meta_k, meta_d, meta_dc, meta_t, meta_bd, hot_k, hot_d, hot_raw, pes, ticket):
     html=Path(tpl).read_text(encoding="utf-8")
     html=replace_js_const(html,"META_KPIS",    meta_k)
     html=replace_js_const(html,"META_DAILY",       meta_d)
@@ -360,6 +380,7 @@ def inject_all(tpl, meta_k, meta_d, meta_dc, meta_t, meta_bd, hot_k, hot_d, pes,
     html=replace_js_const(html,"META_BD",      meta_bd)
     html=replace_js_const(html,"HOT_KPIS",     hot_k)
     html=replace_js_const(html,"HOT_DAILY",    hot_d)
+    html=replace_js_const(html,"HOT_RAW",      hot_raw)
     html=replace_js_const(html,"PESQUISA",     pes)
     html=replace_js_const(html,"TICKET_MEDIO", ticket)
     # Data de geração em Brasília (UTC-3) para o filtro de período correto
@@ -384,7 +405,7 @@ def main():
 
     print("\n[HOTMART]")
     df_hot=load_hotmart()
-    hot_k,hot_d=hotmart_process(df_hot)
+    hot_k,hot_d,h_raw=hotmart_process(df_hot)
     ticket=hot_k["ticket_medio"]
     print(f"  ✓ {hot_k['qtd']} vendas | R$ {hot_k['total']:,.2f} | ticket R$ {ticket:.2f}")
 
@@ -405,7 +426,7 @@ def main():
     print("\n[HTML]")
     if not Path(TEMPLATE_FILE).exists():
         print(f"  ERRO: {TEMPLATE_FILE} não encontrado"); return
-    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_t,m_bd,hot_k,hot_d,pes,ticket)
+    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_t,m_bd,hot_k,hot_d,h_raw,pes,ticket)
     Path(OUTPUT_FILE).write_text(html,encoding="utf-8")
     print(f"  ✓ {OUTPUT_FILE} ({len(html)//1024}KB)")
 
