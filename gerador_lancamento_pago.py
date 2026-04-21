@@ -17,7 +17,7 @@ NOME_CLIENTE     = "Carol"
 LOGO_LETRA       = "C"
 COR_ACENTO       = "#e11d48"
 
-LANCAMENTO_COD   = "VSE02"        # filtra campanhas; "" = ver tudo
+LANCAMENTO_COD   = ""        # filtra campanhas; "" = ver tudo
 
 PRODUTOS_HOTMART = ["ALL"]              # ex: ["Semana Pensar Estilo"]; [] = todos
 
@@ -25,6 +25,24 @@ CPA_BOM          = 50
 CPA_MEDIO        = 80
 ROAS_BOM         = 1.0
 ROAS_MEDIO       = 0.6
+
+# Metas do funil — define cores (verde/amarelo/vermelho) nas taxas
+# Cada métrica: [valor_bom, valor_medio] — acima do bom = verde, entre = amarelo, abaixo = vermelho
+
+CTR_BOM          = 1.2    # CTR ≥ 1.2% → verde | 0.8-1.2% → amarelo | <0.8% → vermelho
+CTR_MEDIO        = 0.8
+
+CR_BOM           = 75.0   # Connect Rate ≥ 75% → verde | 63-75% → amarelo | <63% → vermelho
+CR_MEDIO         = 63.0
+
+TX_IC_BOM        = 20.0   # Tx Init Checkout ≥ 20% → verde | 15-20% → amarelo | <15% → vermelho
+TX_IC_MEDIO      = 15.0
+
+TX_CK_BOM        = 32.0   # Taxa Checkout ≥ 32% → verde | 23-32% → amarelo | <23% → vermelho
+TX_CK_MEDIO      = 23.0
+
+TX_CONV_BOM      = 8.0    # Taxa Conversão LP ≥ 8% → verde | 6-8% → amarelo | <5% → vermelho
+TX_CONV_MEDIO    = 6.0
 
 # ══════════════════════════════════════════════════════
 def sheet_url(t): return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={t}"
@@ -202,6 +220,29 @@ def meta_daily_camps(df, ticket):
             result[key][camp]=build_daily(p,ticket)
     return result
 
+def meta_raw(df, ticket):
+    """Raw agregado por dia+campanha+adset — para filtro de datas livres nas tabelas"""
+    rows=[]
+    agg=df.groupby(["date","campaign","adset","is_lct"]).agg(
+        spend=("spend","sum"), purchase=("purchase","sum"),
+        impressions=("impressions","sum"), link_clicks=("link_clicks","sum"),
+        page_view=("page_view","sum"), init_checkout=("init_checkout","sum"),
+        revenue_meta=("revenue_meta","sum")
+    ).reset_index()
+    for _,r in agg.iterrows():
+        sp=float(r["spend"]); pur=int(r["purchase"]); imp=int(r["impressions"])
+        lc=int(r["link_clicks"]); pv=int(r["page_view"]); ic=int(r["init_checkout"])
+        rev=float(r["revenue_meta"])
+        rows.append({
+            "d": r["date"].strftime("%d/%m"),
+            "c": str(r["campaign"]),
+            "a": str(r["adset"]),
+            "lct": bool(r["is_lct"]),
+            "sp": round(sp,2), "pur": pur, "imp": imp,
+            "lc": lc, "pv": pv, "ic": ic, "rev": round(rev,2)
+        })
+    return rows
+
 def build_rows(agg, col, ticket):
     rows=[]
     for _,r in agg.sort_values("purchase",ascending=False).iterrows():
@@ -371,11 +412,12 @@ def replace_js_const(html, name, value):
     if not found[0]: print(f"  AVISO: não encontrou const {name}")
     return new_html
 
-def inject_all(tpl, meta_k, meta_d, meta_dc, meta_t, meta_bd, hot_k, hot_d, hot_raw, pes, ticket):
+def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, hot_k, hot_d, hot_raw, pes, ticket):
     html=Path(tpl).read_text(encoding="utf-8")
     html=replace_js_const(html,"META_KPIS",    meta_k)
     html=replace_js_const(html,"META_DAILY",       meta_d)
     html=replace_js_const(html,"META_DAILY_CAMPS", meta_dc)
+    html=replace_js_const(html,"META_RAW_CAMP",    meta_raw_c)
     html=replace_js_const(html,"META_TABLES",      meta_t)
     html=replace_js_const(html,"META_BD",      meta_bd)
     html=replace_js_const(html,"HOT_KPIS",     hot_k)
@@ -414,6 +456,7 @@ def main():
     m_k=meta_kpis(df_meta,ticket)
     m_d=meta_daily(df_meta,ticket)
     m_dc=meta_daily_camps(df_meta,ticket)
+    m_raw=meta_raw(df_meta,ticket)
     m_t=meta_tables(df_meta,img_dir,ticket)
     m_bd=meta_breakdowns(df_meta)
     print(f"  ✓ {len(m_t['lct']['all']['camps'])} camps | {len(m_t['lct']['all']['adsets'])} adsets | {len(m_t['lct']['all']['ads'])} ads")
@@ -426,7 +469,7 @@ def main():
     print("\n[HTML]")
     if not Path(TEMPLATE_FILE).exists():
         print(f"  ERRO: {TEMPLATE_FILE} não encontrado"); return
-    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_t,m_bd,hot_k,hot_d,h_raw,pes,ticket)
+    html=inject_all(TEMPLATE_FILE,m_k,m_d,m_dc,m_raw,m_t,m_bd,hot_k,hot_d,h_raw,pes,ticket)
     Path(OUTPUT_FILE).write_text(html,encoding="utf-8")
     print(f"  ✓ {OUTPUT_FILE} ({len(html)//1024}KB)")
 
