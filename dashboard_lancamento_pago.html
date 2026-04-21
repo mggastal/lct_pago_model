@@ -141,9 +141,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 
 /* PIZZA */
 .pizza-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:14px;}
-.pz-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px;box-shadow:var(--sh);}
+.pz-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px;box-shadow:var(--sh);overflow:hidden;max-width:100%;}
 .pz-q{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:8px;line-height:1.4;}
-.pz-cw{height:160px;position:relative;min-height:160px;}
+.pz-cw{height:160px;position:relative;min-height:160px;overflow:hidden;max-width:100%;}
 .pz-leg{margin-top:6px;display:flex;flex-direction:column;gap:3px;}
 .pl{display:flex;align-items:center;gap:5px;font-size:10px;}
 .pl-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
@@ -170,12 +170,14 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .mob-menu{display:none;width:34px;height:34px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:17px;align-items:center;justify-content:center;}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:250;}
 .overlay.open{display:block;}
-@media(max-width:768px){.topbar{left:0;right:0;}
+@media(max-width:768px){.topbar{left:0;right:0;z-index:299!important;}
   .ov-bottom{grid-template-columns:1fr!important;}
-  .content{padding-top:150px!important;}
+  .content{padding-top:160px!important;}
+  .pz-cw canvas{max-width:100%!important;}
+  .pz-card{width:100%;box-sizing:border-box;}
 
   .app{grid-template-columns:1fr;}
-  .sb{display:none;position:fixed;top:0;left:0;width:240px;height:100vh;z-index:310;}
+  .sb{display:none;position:fixed;top:0;left:0;width:240px;height:100vh;z-index:400!important;}
   .sb.open{display:flex;}
   .mob-menu{display:flex;}
   .content{padding:12px;overflow-x:hidden;}
@@ -187,6 +189,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
   .utm-groups{grid-template-columns:1fr;}
   .pes-kpis{grid-template-columns:1fr 1fr;}
   .daily-row{grid-template-columns:1fr;}
+  .seg-card table{min-width:280px;}
+  .seg-card{overflow-x:auto!important;}
   .daily-side{flex-direction:row;gap:12px;border-right:none;border-bottom:1px solid var(--border);}
 }
 </style>
@@ -252,7 +256,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
         <div class="cw" style="height:230px"><canvas id="chOvMain"></canvas></div>
       </div>
       <!-- Origem (30%) + Produto (70%) -->
-      <div style="display:grid;grid-template-columns:3fr 7fr;gap:12px;margin-bottom:14px;">
+      <div class="ov-bottom" style="display:grid;grid-template-columns:3fr 7fr;gap:12px;margin-bottom:14px;">
         <div class="cc">
           <div class="cc-t">Vendas por Origem</div>
           <div class="cc-s">Tráfego Pago vs Orgânico</div>
@@ -295,26 +299,32 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 
     <!-- MÉTRICAS DIÁRIAS -->
     <div class="page-section" id="page-diario">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:14px;box-shadow:var(--sh);">
-        <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:8px;">Filtrar por campanha</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;" id="campFilter"></div>
-      </div>
+      <details style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:0;margin-bottom:14px;box-shadow:var(--sh);" id="campFilterDetails">
+        <summary style="padding:10px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;">
+          Filtrar por campanha <span id="campFilterCount" style="font-weight:400;font-size:10px"></span>
+          <span style="font-size:13px;color:var(--muted2)">▾</span>
+        </summary>
+        <div style="padding:0 14px 12px;" id="campFilter"></div>
+      </details>
       <div id="dailyCharts"></div>
     </div>
 
     <!-- PESQUISA -->
     <div class="page-section" id="page-pesquisa">
       <div class="krow pes-kpis" id="pesKpis"></div>
-      <div class="filter-box">
-        <div class="filter-box-ttl">Filtrar respostas por origem</div>
-        <div class="utm-groups" id="utmGroups"></div>
-        <div class="filter-actions">
-          <button class="fa-btn" onclick="checkAll(true)">Marcar todas</button>
-          <button class="fa-btn" onclick="checkAll(false)">Desmarcar todas</button>
-          <button class="fa-btn" onclick="checkAll(true)">Limpar filtros</button>
-          <span class="pes-count" id="pesCount"></span>
+      <details class="filter-box" style="padding:0">
+        <summary style="padding:12px 14px;cursor:pointer;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;">
+          Filtrar respostas por origem <span style="font-size:13px;color:var(--muted2)">▾</span>
+        </summary>
+        <div style="padding:0 14px 12px;">
+          <div class="utm-groups" id="utmGroups"></div>
+          <div class="filter-actions">
+            <button class="fa-btn" onclick="checkAll(true)">Marcar todas</button>
+            <button class="fa-btn" onclick="checkAll(false)">Desmarcar todas</button>
+            <span class="pes-count" id="pesCount"></span>
+          </div>
         </div>
-      </div>
+      </details>
       <div class="pizza-grid" id="pizzaGrid"></div>
     </div>
 
@@ -630,15 +640,11 @@ function renderOverview(){
       el.innerHTML=`<table style="width:100%;border-collapse:collapse">
         <thead><tr style="background:var(--surface2)">
           <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;padding:6px 10px;text-align:left">Produto</th>
-          <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#f97316;font-weight:700;padding:6px 10px;text-align:right">Pago</th>
-          <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#ea580c;font-weight:700;padding:6px 10px;text-align:right">Orgânico</th>
-          <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;padding:6px 10px;text-align:right">Total</th>
+          <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;padding:6px 10px;text-align:right">Vendas</th>
           <th style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#059669;font-weight:700;padding:6px 10px;text-align:right">Faturamento</th>
         </tr></thead>
         <tbody>${prods.map(p=>`<tr>
-          <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 10px;border-bottom:1px solid var(--border)" title="${p.produto}">${p.produto}</td>
-          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#f97316">${fN(p.pago)}</td>
-          <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#ea580c">${fN(p.org)}</td>
+          <td style="font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 10px;border-bottom:1px solid var(--border)" title="${p.produto}">${p.produto}</td>
           <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);font-weight:700">${fN(p.total)}</td>
           <td style="font-size:11px;text-align:right;padding:6px 10px;font-family:monospace;border-bottom:1px solid var(--border);color:#059669;font-weight:600">${fR(p.val)}</td>
         </tr>`).join('')}</tbody>
@@ -938,6 +944,8 @@ function buildCampFilter(){
     </label>`).join('')
     +'</div>';
   campFilterSel=new Set();
+  const cnt=document.getElementById('campFilterCount');
+  if(cnt) cnt.textContent=camps.length?`(${camps.length} campanhas)`:'';
 }
 function toggleTodas(cb){
   document.querySelectorAll('.camp-cb').forEach(c=>{c.checked=cb.checked;});
