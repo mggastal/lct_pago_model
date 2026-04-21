@@ -591,14 +591,18 @@ function renderOverview(){
 
   const md=getMD(); const hd=getHD();
   if(md||hd){
-    // Usar união das datas de Meta e Hotmart como eixo X
-    const allDaysSet=new Set([...(md?.days||[]),...(hd?.days||[])]);
-    // Ordenar por data real
-    const hoje=getHoje();
+    // União das datas de Meta e Hotmart, ordenadas cronologicamente
+    const allDaysSet=new Set([...(hd?.days||[]),...(md?.days||[])]);
     const days=[...allDaysSet].sort((a,b)=>{
       const [da,ma]=a.split('/').map(Number);
       const [db,mb]=b.split('/').map(Number);
-      return new Date(hoje.getFullYear(),ma-1,da)-new Date(hoje.getFullYear(),mb-1,db);
+      // Usar ano fixo 2000 para comparar (só importa mês e dia relativos)
+      const dateA=ma*100+da; // número simples: mmdd
+      const dateB=mb*100+db;
+      // Ajuste para virada de ano: se diferença > 600, o menor mês é do ano seguinte
+      let diff=dateA-dateB;
+      if(Math.abs(diff)>600) diff=-diff; // inverter se cruzar virada de ano
+      return diff;
     });
     // Mapas de Meta e Hotmart por dia
     const metaSpend={},metaInvest={};
