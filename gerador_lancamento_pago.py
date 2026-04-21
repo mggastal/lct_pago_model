@@ -18,8 +18,8 @@ LOGO_LETRA       = "LM"
 COR_ACENTO       = "#e11d48"
 
 LANCAMENTO_COD   = "LDabr26"        # filtra campanhas; "" = ver tudo
-
-PRODUTOS_HOTMART = []              # ex: ["Semana Pensar Estilo"]; [] = todos
+USAR_PESQUISA    = False
+PRODUTOS_HOTMART = ["Little Dates"]              # ex: ["Semana Pensar Estilo"]; [] = todos
 
 CPA_BOM          = 50
 CPA_MEDIO        = 80
