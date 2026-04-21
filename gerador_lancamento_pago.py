@@ -13,15 +13,13 @@ SHEET_ID         = "18ugpwn3aqeWg-pCFLHLKXjyN1QfndQw9x9JCCIoPB2M"
 TEMPLATE_FILE    = "dashboard_lancamento_pago.html"
 OUTPUT_FILE      = "index.html"
 
-USAR_PESQUISA = False
-
 NOME_CLIENTE     = "Little Monstar"
 LOGO_LETRA       = "LM"
 COR_ACENTO       = "#e11d48"
 
 LANCAMENTO_COD   = "LDabr26"        # filtra campanhas; "" = ver tudo
 
-PRODUTOS_HOTMART = ["Little Dates"]              # ex: ["Semana Pensar Estilo"]; [] = todos
+PRODUTOS_HOTMART = []              # ex: ["Semana Pensar Estilo"]; [] = todos
 
 CPA_BOM          = 50
 CPA_MEDIO        = 80
