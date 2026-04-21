@@ -8,9 +8,12 @@ from pathlib import Path
 # ══════════════════════════════════════════════════════
 # CONFIG
 # ══════════════════════════════════════════════════════
+
 SHEET_ID         = "18ugpwn3aqeWg-pCFLHLKXjyN1QfndQw9x9JCCIoPB2M"
 TEMPLATE_FILE    = "dashboard_lancamento_pago.html"
 OUTPUT_FILE      = "index.html"
+
+USAR_PESQUISA = False
 
 NOME_CLIENTE     = "Little Monstar"
 LOGO_LETRA       = "LM"
@@ -18,7 +21,7 @@ COR_ACENTO       = "#e11d48"
 
 LANCAMENTO_COD   = "LDabr26"        # filtra campanhas; "" = ver tudo
 
-PRODUTOS_HOTMART = ["Little Dates 2026 (COMBO)","Little Dates [ Aula 03 ]","Little Dates [ Aula 02 ]","Little Dates [ Aula 01 ]"]              # ex: ["Semana Pensar Estilo"]; [] = todos
+PRODUTOS_HOTMART = ["Little Dates"]              # ex: ["Semana Pensar Estilo"]; [] = todos
 
 CPA_BOM          = 50
 CPA_MEDIO        = 80
@@ -42,7 +45,6 @@ TX_CK_MEDIO      = 23.0
 
 TX_CONV_BOM      = 8.0    # Taxa Conversão LP ≥ 8% → verde | 6-8% → amarelo | <5% → vermelho
 TX_CONV_MEDIO    = 6.0
-
 
 # ══════════════════════════════════════════════════════
 def sheet_url(t): return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={t}"
