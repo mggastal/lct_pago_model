@@ -17,9 +17,9 @@ NOME_CLIENTE     = "Carol"
 LOGO_LETRA       = "C"
 COR_ACENTO       = "#e11d48"
 
-LANCAMENTO_COD   = ""        # filtra campanhas; "" = ver tudo
+LANCAMENTO_COD   = "VSE02"        # filtra campanhas; "" = ver tudo
 
-PRODUTOS_HOTMART = ["ALL"]              # ex: ["Semana Pensar Estilo"]; [] = todos
+PRODUTOS_HOTMART = ["Semana Pensar Estilo"]              # ex: ["Semana Pensar Estilo"]; [] = todos
 
 CPA_BOM          = 50
 CPA_MEDIO        = 80
