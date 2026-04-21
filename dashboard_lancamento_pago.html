@@ -208,7 +208,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
     <button class="sb-item active" onclick="goPage('overview',this)"><span class="ico">📊</span>Overview</button>
     <button class="sb-item" onclick="goPage('meta',this)"><span class="ico">🎯</span>Meta Ads</button>
     <button class="sb-item" onclick="goPage('diario',this)"><span class="ico">📈</span>Métricas Diárias</button>
-    <button class="sb-item" onclick="goPage('pesquisa',this)"><span class="ico">🔍</span>Pesquisa</button>
+    <button class="sb-item" id="sbPesquisa" onclick="goPage('pesquisa',this)"><span class="ico">🔍</span>Pesquisa</button>
   </nav>
   <div class="sb-lct"><div class="sb-lct-lbl">Lançamento</div><div class="sb-lct-val" id="sbLct">—</div></div>
   <div class="sb-footer"><span id="sbAtual">--/--/---- · via planilha</span></div>
@@ -259,7 +259,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
       <div class="ov-bottom" style="display:grid;grid-template-columns:3fr 7fr;gap:12px;margin-bottom:14px;">
         <div class="cc">
           <div class="cc-t">Vendas por Origem</div>
-          <div class="cc-s">Tráfego Pago vs Orgânico</div>
+          <div class="cc-s">Tráfego Pago vs Orgânico · Last Click antes da compra</div>
           <div class="cw" style="height:180px"><canvas id="chOvOrigem"></canvas></div>
         </div>
         <div class="cc">
@@ -283,10 +283,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
         <div class="tc" id="tCamps"></div>
       </div>
 
-      <div class="section">
-        <div class="sec-hd">Criativos</div>
-        <div class="ads-grid" id="adsGrid"></div>
-      </div>
       <div class="section" style="margin-top:16px">
         <div class="sec-hd">Segmentação</div>
         <div class="g3">
@@ -294,6 +290,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
           <div><div class="seg-ttl">Faixa Etária</div><div class="seg-card" id="tAge"></div></div>
           <div><div class="seg-ttl">Posicionamento</div><div class="seg-card" id="tPlatform"></div></div>
         </div>
+      </div>
+
+      <!-- Ranking de Criativos -->
+      <div class="section" style="margin-top:16px">
+        <div class="sec-hd">Ranking de Criativos</div>
+        <div class="ads-grid" id="adsGrid"></div>
       </div>
     </div>
 
@@ -426,13 +428,17 @@ function applyPeriod(daily){
   let idxs=days.map((_,i)=>i);
 
   if(periodDays>0){
-    // Filtrar pelos últimos N dias A PARTIR DA DATA DE GERAÇÃO
-    const inicio=new Date(hoje);
-    inicio.setDate(inicio.getDate()-(periodDays-1));
+    // periodDays=1 significa "ontem" = DATA_GERACAO - 1
+    // periodDays>1 significa "últimos N dias" incluindo hoje
+    const fim=new Date(hoje);
+    if(periodDays===1) fim.setDate(fim.getDate()-1); // ontem
+    fim.setHours(23,59,59,999);
+    const inicio=new Date(fim);
+    inicio.setDate(inicio.getDate()-(periodDays===1?0:periodDays-1));
     inicio.setHours(0,0,0,0);
     idxs=idxs.filter(i=>{
       const dt=parseDayStr(days[i]);
-      return dt>=inicio && dt<=hoje;
+      return dt>=inicio && dt<=fim;
     });
   }
 
@@ -548,7 +554,7 @@ function renderOverview(){
   const hoje2=getHoje();
   const rawKpi=(HOT_RAW||[]).filter(r=>{
     const dt=parseDayStr(r.d);
-    if(periodDays>0){const ini=new Date(hoje2);ini.setDate(ini.getDate()-(periodDays-1));ini.setHours(0,0,0,0);if(dt<ini||dt>hoje2)return false;}
+    if(periodDays>0){const fim2=new Date(hoje2);if(periodDays===1)fim2.setDate(fim2.getDate()-1);fim2.setHours(23,59,59);const ini=new Date(fim2);ini.setDate(ini.getDate()-(periodDays===1?0:periodDays-1));ini.setHours(0,0,0,0);if(dt<ini||dt>fim2)return false;}
     if(dateI&&dt<dateI)return false; if(dateF&&dt>dateF)return false;
     return true;
   });
@@ -636,8 +642,9 @@ function renderOverview(){
     const rawF=HOT_RAW.filter(r=>{
       const dt=parseDayStr(r.d);
       if(periodDays>0){
-        const ini=new Date(hoje); ini.setDate(ini.getDate()-(periodDays-1)); ini.setHours(0,0,0,0);
-        if(dt<ini||dt>hoje) return false;
+        const fimF2=new Date(hoje); if(periodDays===1) fimF2.setDate(fimF2.getDate()-1); fimF2.setHours(23,59,59);
+        const ini=new Date(fimF2); ini.setDate(ini.getDate()-(periodDays===1?0:periodDays-1)); ini.setHours(0,0,0,0);
+        if(dt<ini||dt>fimF2) return false;
       }
       if(dateI&&dt<dateI) return false;
       if(dateF&&dt>dateF) return false;
@@ -702,7 +709,7 @@ function renderMeta(){
   const purMK=mdMK?.purchase?.reduce((a,b)=>a+(b||0),0)||0;
   const rawMK=(HOT_RAW||[]).filter(r=>{
     const dt=parseDayStr(r.d);
-    if(periodDays>0){const ini=new Date(getHoje());ini.setDate(ini.getDate()-(periodDays-1));ini.setHours(0,0,0,0);if(dt<ini||dt>getHoje())return false;}
+    if(periodDays>0){const fimMK=new Date(getHoje());if(periodDays===1)fimMK.setDate(fimMK.getDate()-1);fimMK.setHours(23,59,59);const ini=new Date(fimMK);ini.setDate(ini.getDate()-(periodDays===1?0:periodDays-1));ini.setHours(0,0,0,0);if(dt<ini||dt>fimMK)return false;}
     if(dateI&&dt<dateI)return false; if(dateF&&dt>dateF)return false;
     return true;
   });
@@ -753,13 +760,16 @@ function getPeriodKey(){
 function calcTableFromRaw(){
   if(!META_RAW_CAMP?.length) return null;
   const hoje=getHoje();
+  const fimRaw=new Date(hoje);
+  if(periodDays===1) fimRaw.setDate(fimRaw.getDate()-1);
+  fimRaw.setHours(23,59,59,999);
   // Filtrar raw pelo período atual
   const filtered=META_RAW_CAMP.filter(r=>{
     if(filtroLct && !r.lct) return false;
     const dt=parseDayStr(r.d);
     if(periodDays>0){
-      const ini=new Date(hoje); ini.setDate(ini.getDate()-(periodDays-1)); ini.setHours(0,0,0,0);
-      if(dt<ini||dt>hoje) return false;
+      const ini=new Date(fimRaw); ini.setDate(ini.getDate()-(periodDays===1?0:periodDays-1)); ini.setHours(0,0,0,0);
+      if(dt<ini||dt>fimRaw) return false;
     }
     if(dateI&&dt<dateI) return false;
     if(dateF&&dt>dateF) return false;
@@ -847,8 +857,9 @@ function filterBdRaw(rawArr, keyFn, dims){
   const filtered=(rawArr||[]).filter(r=>{
     const dt=parseDayStr(r.d);
     if(periodDays>0){
-      const ini=new Date(hoje);ini.setDate(ini.getDate()-(periodDays-1));ini.setHours(0,0,0,0);
-      if(dt<ini||dt>hoje) return false;
+      const fimBD=new Date(hoje);if(periodDays===1)fimBD.setDate(fimBD.getDate()-1);fimBD.setHours(23,59,59);
+      const ini=new Date(fimBD);ini.setDate(ini.getDate()-(periodDays===1?0:periodDays-1));ini.setHours(0,0,0,0);
+      if(dt<ini||dt>fimBD) return false;
     }
     if(dateI&&dt<dateI) return false;
     if(dateF&&dt>dateF) return false;
@@ -1045,7 +1056,8 @@ function renderAds(ads){
     const img=ad.thumb?`<img src="${ad.thumb}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=ad-img-ph>🖼️</div>'">`:'<div class="ad-img-ph">🖼️</div>';
     return `<div class="ad-card"><div class="ad-img">${img}</div>
       <div class="ad-info"><div class="ad-name">${ad.n}</div>
-        <div style="font-size:9px;color:var(--muted2);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ad.camp||''}">${ad.camp?'📁 '+ad.camp.split('-').slice(-2).join('-'):''}</div>
+        <div style="font-size:9px;color:var(--muted2);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ad.camp||''}">${ad.camp?'📁 '+ad.camp.split('-').slice(-2).join('-'):''}</div>
+        <div style="font-size:8px;color:var(--muted2);opacity:.75;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ad.adset||''}">${ad.adset?'↳ '+ad.adset:''}</div>
         <div class="ad-stats">
           <div><div class="as-l">Vendas</div><div class="as-v">${fN(ad.pur)}</div></div>
           <div><div class="as-l">CPA</div><div class="as-v ${cpaCls(ad.cpa)}">${fR(ad.cpa)}</div></div>
