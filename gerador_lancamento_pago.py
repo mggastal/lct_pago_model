@@ -84,7 +84,12 @@ def load_hotmart():
     df=pd.read_csv(URL_HOT)
     # Nome da coluna de data pode variar no CSV do Sheets
     date_col = next((c for c in df.columns if c.lower() in ["data","date","data de compra"]), df.columns[1])
-    df["date"]=pd.to_datetime(df[date_col],errors="coerce")
+    # Detectar formato de data: "27/03/2026" (BR) ou "2026-03-27" (ISO)
+    raw_dates = df[date_col].astype(str).str.strip()
+    if raw_dates.dropna().str.match(r"\d{2}/\d{2}/\d{4}").any():
+        df["date"] = pd.to_datetime(raw_dates, format="%d/%m/%Y", errors="coerce")
+    else:
+        df["date"] = pd.to_datetime(raw_dates, errors="coerce")
     # Nome da coluna de valor — usar to_num para detectar formato BR (29,9) ou US (29.9)
     valor_col = next((c for c in df.columns if "valor" in c.lower() and "bruto" in c.lower()), "Valor bruto")
     df["valor"]=to_num(df[valor_col])
@@ -447,7 +452,7 @@ def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, hot_k,
     html=replace_js_const(html,"HOT_KPIS",     hot_k)
     html=replace_js_const(html,"HOT_DAILY",    hot_d)
     html=replace_js_const(html,"HOT_RAW",      hot_raw)
-    html=replace_js_const(html,"PESQUISA",     pes)
+    html=replace_js_const(html,"PESQUISA", pes if USAR_PESQUISA else False)
     html=replace_js_const(html,"TICKET_MEDIO", ticket)
     # Data de geração em Brasília (UTC-3) para o filtro de período correto
     from datetime import timezone, timedelta
