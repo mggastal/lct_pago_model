@@ -780,7 +780,33 @@ function calcTableFromRaw(){
   const campNamesInPeriod=new Set(camps.map(c=>c.n));
   const adsetPairs=new Set(adsets.map(a=>a.camp+'|||'+a.n));
   const allAds=((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']?.ads||[];
-  const ads=allAds.filter(a=>campNamesInPeriod.has(a.camp)&&adsetPairs.has(a.camp+'|||'+a.adset));
+  // Escalar métricas dos ads pelo fator do adset no período
+  // fator = spend_adset_período / spend_adset_total
+  const adsetTotalMap={};
+  ((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']?.adsets?.forEach(a=>{
+    adsetTotalMap[a.camp+'|||'+a.n]={spend:a.spend||0,pur:a.pur||0,imp:a.imp||0,lc:a.lc||0};
+  });
+  const adsetPeriodMap={};
+  adsets.forEach(a=>{ adsetPeriodMap[a.camp+'|||'+a.n]={spend:a.spend||0,pur:a.pur||0,imp:a.imp||0,lc:a.lc||0}; });
+
+  const ads=allAds
+    .filter(a=>campNamesInPeriod.has(a.camp)&&adsetPairs.has(a.camp+'|||'+a.adset))
+    .map(a=>{
+      const key=a.camp+'|||'+a.adset;
+      const tot=adsetTotalMap[key]; const per=adsetPeriodMap[key];
+      // Fator de escala: proporção do spend do adset no período vs total
+      const fSp=tot?.spend>0?(per?.spend||0)/tot.spend:0;
+      const fPur=tot?.pur>0?(per?.pur||0)/tot.pur:0;
+      const fImp=tot?.imp>0?(per?.imp||0)/tot.imp:0;
+      const fLc=tot?.lc>0?(per?.lc||0)/tot.lc:0;
+      const sp=r2((a.spend||0)*fSp);
+      const pur=Math.round((a.pur||0)*fPur);
+      const imp=Math.round((a.imp||0)*fImp);
+      const lc=Math.round((a.lc||0)*fLc);
+      return {...a, spend:sp, pur, imp, lc,
+        ctr:imp>0?r2(lc/imp*100):null,
+        cpa:sp>0&&pur>0?r2(sp/pur):null};
+    });
   return {camps, adsets, ads};
 }
 
@@ -1372,6 +1398,13 @@ window.addEventListener('resize', ajustarPaddingContent);
     if(sfEl&&sfEl.textContent.includes('--')) sfEl.textContent='Atualizado '+d[d.length-1];
   }
   if(LANCAMENTO_COD){const lb2=document.getElementById('lctBar');if(lb2)lb2.style.display='flex';document.getElementById('btnLctOn').textContent=LANCAMENTO_COD;}
+  // Pesquisa: esconder menu e aba se PESQUISA=false
+  if(PESQUISA===false||PESQUISA===null){
+    const sbP=document.getElementById('sbPesquisa');
+    if(sbP) sbP.style.display='none';
+    const pgP=document.getElementById('page-pesquisa');
+    if(pgP) pgP.style.display='none';
+  }
   renderOverview();
   ajustarPaddingContent();
 })();
