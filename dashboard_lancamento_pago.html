@@ -590,19 +590,31 @@ function renderOverview(){
   }
 
   const md=getMD(); const hd=getHD();
-  if(md&&hd){
-    const days=md.days;
+  if(md||hd){
+    // Usar união das datas de Meta e Hotmart como eixo X
+    const allDaysSet=new Set([...(md?.days||[]),...(hd?.days||[])]);
+    // Ordenar por data real
+    const hoje=getHoje();
+    const days=[...allDaysSet].sort((a,b)=>{
+      const [da,ma]=a.split('/').map(Number);
+      const [db,mb]=b.split('/').map(Number);
+      return new Date(hoje.getFullYear(),ma-1,da)-new Date(hoje.getFullYear(),mb-1,db);
+    });
+    // Mapas de Meta e Hotmart por dia
+    const metaSpend={},metaInvest={};
+    (md?.days||[]).forEach((d,i)=>{metaSpend[d]=(metaSpend[d]||0)+(md.spend[i]||0);});
     const hm={},hval={};
-    hd.days.forEach((d,i)=>{hm[d]=(hm[d]||0)+hd.qtd[i];hval[d]=(hval[d]||0)+hd.valor[i];});
+    (hd?.days||[]).forEach((d,i)=>{hm[d]=(hm[d]||0)+(hd.qtd[i]||0);hval[d]=(hval[d]||0)+(hd.valor[i]||0);});
     const vendas=days.map(d=>hm[d]||null);
-    const cpv=days.map((d,i)=>{const v=hm[d]||0;const s=md.spend[i]||0;return v>0?r2(s/v):null;});
+    const invest=days.map(d=>metaSpend[d]||null);
+    const cpv=days.map(d=>{const v=hm[d]||0;const s=metaSpend[d]||0;return v>0&&s>0?r2(s/v):null;});
 
     dc('chOvMain');
     CH['chOvMain']=new Chart(document.getElementById('chOvMain'),{
       data:{labels:days,datasets:[
         {label:'Vendas',data:vendas,backgroundColor:'rgba(249,115,22,.75)',borderRadius:3,type:'bar',yAxisID:'y1',
          datalabels:{...makeDatalabels('#f97316','',v=>v!=null?fN(v):null),display:ctx=>showLabels}},
-        {label:'Invest.',data:md.spend,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line',spanGaps:true,datalabels:{display:false}},
+        {label:'Invest.',data:invest,borderColor:'#059669',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:2,type:'line',spanGaps:true,datalabels:{display:false}},
         {label:'CPV',data:cpv,borderColor:'#111',borderDash:[5,3],backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,type:'line',yAxisID:'y2',spanGaps:true,datalabels:{display:ctx=>showLabels,color:'#333',font:{size:8,weight:'bold'},formatter:v=>v!=null?'R$'+v.toFixed(0):null,anchor:'end',align:'top',offset:2,clip:false}},
       ]},
       options:{...bo(),scales:{
