@@ -1,13 +1,13 @@
 {
-  "cliente": "Carol",
+  "cliente": "Little Monstar",
   "cor": "#e11d48",
-  "letra": "C",
-  "lancamento": "VSE02",
+  "letra": "LM",
+  "lancamento": "LDabr26",
   "atualizado": "21/04/2026",
   "kpis": {
-    "spend": 10088.81,
-    "vendas": 180,
-    "faturamento": 0.0,
-    "cpa": 58.32
+    "spend": 249.79,
+    "vendas": 39,
+    "faturamento": 8019.5,
+    "cpa": 83.26
   }
 }
