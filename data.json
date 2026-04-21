@@ -2,12 +2,12 @@
   "cliente": "Carol",
   "cor": "#e11d48",
   "letra": "C",
-  "lancamento": "VSE02",
+  "lancamento": "",
   "atualizado": "21/04/2026",
   "kpis": {
-    "spend": 10088.81,
+    "spend": 28849.43,
     "vendas": 1234,
-    "faturamento": 69719.0,
-    "cpa": 58.32
+    "faturamento": 0.0,
+    "cpa": 62.18
   }
 }
