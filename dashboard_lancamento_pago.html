@@ -749,7 +749,7 @@ function calcTableFromRaw(){
     if(dateF&&dt>dateF) return false;
     return true;
   });
-  if(!filtered.length) return {camps:[],adsets:[],ads:getMT()?.ads||[]};
+  if(!filtered.length) return {camps:[],adsets:[],ads:[]};
 
   // Agregar por campanha
   const campMap={};
@@ -776,26 +776,68 @@ function calcTableFromRaw(){
 
   const camps=Object.values(campMap).map(calcRow).sort((a,b)=>b.pur-a.pur);
   const adsets=Object.values(adsetMap).map(calcRow).sort((a,b)=>b.pur-a.pur);
-  // Ads: usar os do período pré-calculado mais próximo como fallback
-  const ads=getMT()?.ads||[];
+  // Ads: filtrar pelos adsets/camps que têm dados no período
+  const campNamesInPeriod=new Set(camps.map(c=>c.n));
+  const adsetPairs=new Set(adsets.map(a=>a.camp+'|||'+a.n));
+  const allAds=((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']?.ads||[];
+  const ads=allAds.filter(a=>campNamesInPeriod.has(a.camp)&&adsetPairs.has(a.camp+'|||'+a.adset));
   return {camps, adsets, ads};
 }
 
+let _calcRawRunning=false;
 function getMT(){
   const key=getPeriodKey();
   if(key){
-    // Período fixo: usar tabelas pré-calculadas
     const base=filtroLct?META_TABLES?.lct:META_TABLES?.all;
     if(!base) return null;
     return base[key]||base['all']||null;
   }
-  // Datas livres ou filtroLct: calcular do raw
-  return calcTableFromRaw()||((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||null;
+  // Datas livres: calcular do raw (sem recursão)
+  if(_calcRawRunning) return ((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||null;
+  _calcRawRunning=true;
+  const result=calcTableFromRaw();
+  _calcRawRunning=false;
+  return result||((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||null;
 }
+function filterBdRaw(rawArr, keyFn, dims){
+  // Agregar array raw por dimensões, filtrado pelo período atual
+  const hoje=getHoje();
+  const filtered=(rawArr||[]).filter(r=>{
+    const dt=parseDayStr(r.d);
+    if(periodDays>0){
+      const ini=new Date(hoje);ini.setDate(ini.getDate()-(periodDays-1));ini.setHours(0,0,0,0);
+      if(dt<ini||dt>hoje) return false;
+    }
+    if(dateI&&dt<dateI) return false;
+    if(dateF&&dt>dateF) return false;
+    return true;
+  });
+  const map={};
+  filtered.forEach(r=>{
+    const k=keyFn(r);
+    if(!map[k]) map[k]={n:k,spend:0,pur:0};
+    map[k].spend+=r.sp; map[k].pur+=r.pur;
+  });
+  return Object.values(map)
+    .filter(v=>v.spend>0)
+    .map(v=>({...v,spend:r2(v.spend),cpa:v.pur>0?r2(v.spend/v.pur):null}))
+    .sort((a,b)=>b.spend-a.spend);
+}
+
 function getMBD(){
   if(!META_BD) return null;
-  const key=getPeriodKey()||'all';
-  return META_BD[key]||META_BD['all']||null;
+  const key=getPeriodKey();
+  if(key) return META_BD[key]||META_BD['all']||null;
+  // Datas livres: calcular do raw se disponível
+  const rawGa=META_BD._raw_ga;
+  const rawPt=META_BD._raw_pt;
+  if(!rawGa&&!rawPt) return META_BD['all']||null;
+  const AGE_ORDER=["18-24","25-34","35-44","45-54","55-64","65+"];
+  const age=filterBdRaw(rawGa,r=>r.age).filter(v=>AGE_ORDER.includes(v.n))
+    .sort((a,b)=>AGE_ORDER.indexOf(a.n)-AGE_ORDER.indexOf(b.n));
+  const gender=filterBdRaw(rawGa,r=>r.gen).filter(v=>['female','male'].includes(v.n));
+  const platform=filterBdRaw(rawPt,r=>r.plat).slice(0,8);
+  return {age,gender,platform};
 }
 
 function buildTable(elId,data,mainCol){
@@ -848,7 +890,7 @@ function buildTable(elId,data,mainCol){
     <tfoot>
       <tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border)">
         <td></td>
-        <td style="font-size:11px;padding:8px 10px;font-weight:800">TOTAL</td>
+        <td style="font-size:10px;padding:6px 10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px">Total</td>
         ${(()=>{
           const tot={spend:0,imp:0,lc:0,pv:0,ic:0,pur:0,rev:0};
           data.forEach(r=>{tot.spend+=r.spend||0;tot.imp+=r.imp||0;tot.lc+=r.lc||0;tot.pv+=r.pv||0;tot.ic+=r.ic||0;tot.pur+=r.pur||0;tot.rev+=r.rev||0;});
@@ -1226,12 +1268,21 @@ function setPeriod(days,btn){
 }
 
 document.getElementById('dtI').addEventListener('change',e=>{
-  if(e.target.value){const[y,m,d]=e.target.value.split('-').map(Number);dateI=new Date(y,m-1,d,0,0,0);}else dateI=null; periodDays=0;
-  document.querySelectorAll('.period-bar .pb').forEach(b=>b.classList.remove('active')); rerenderActive();
+  if(e.target.value){
+    const[y,m,d]=e.target.value.split('-').map(Number);
+    dateI=new Date(y,m-1,d,0,0,0);
+    const dtFel=document.getElementById('dtF');
+    if(dtFel){dtFel.min=e.target.value; if(!dtFel.value) dtFel.focus();}
+  } else dateI=null;
+  periodDays=0;
+  document.querySelectorAll('.period-bar .pb').forEach(b=>b.classList.remove('active'));
+  rerenderActive();
 });
 document.getElementById('dtF').addEventListener('change',e=>{
-  if(e.target.value){const[y,m,d]=e.target.value.split('-').map(Number);dateF=new Date(y,m-1,d,23,59,59);}else dateF=null; periodDays=0;
-  document.querySelectorAll('.period-bar .pb').forEach(b=>b.classList.remove('active')); rerenderActive();
+  if(e.target.value){const[y,m,d]=e.target.value.split('-').map(Number);dateF=new Date(y,m-1,d,23,59,59);}else dateF=null;
+  periodDays=0;
+  document.querySelectorAll('.period-bar .pb').forEach(b=>b.classList.remove('active'));
+  rerenderActive();
 });
 function clearDates(){
   dateI=null; dateF=null;
