@@ -8,18 +8,17 @@ from pathlib import Path
 # ══════════════════════════════════════════════════════
 # CONFIG
 # ══════════════════════════════════════════════════════
-
-SHEET_ID         = "1wxlEwwiIzPNfObxyjuhaB6uiR7PWj9VdDcQgKx_H8xk"
+SHEET_ID         = "18ugpwn3aqeWg-pCFLHLKXjyN1QfndQw9x9JCCIoPB2M"
 TEMPLATE_FILE    = "dashboard_lancamento_pago.html"
 OUTPUT_FILE      = "index.html"
 
-NOME_CLIENTE     = "Carol"
-LOGO_LETRA       = "C"
+NOME_CLIENTE     = "Little Monstar"
+LOGO_LETRA       = "LM"
 COR_ACENTO       = "#e11d48"
 
-LANCAMENTO_COD   = "VSE02"        # filtra campanhas; "" = ver tudo
+LANCAMENTO_COD   = "LDabr26"        # filtra campanhas; "" = ver tudo
 
-PRODUTOS_HOTMART = ["Semana Pensar Estilo"]              # ex: ["Semana Pensar Estilo"]; [] = todos
+PRODUTOS_HOTMART = ["Little Dates 2026 (COMBO)","Little Dates [ Aula 03 ]","Little Dates [ Aula 02 ]","Little Dates [ Aula 01 ]"]              # ex: ["Semana Pensar Estilo"]; [] = todos
 
 CPA_BOM          = 50
 CPA_MEDIO        = 80
@@ -43,6 +42,7 @@ TX_CK_MEDIO      = 23.0
 
 TX_CONV_BOM      = 8.0    # Taxa Conversão LP ≥ 8% → verde | 6-8% → amarelo | <5% → vermelho
 TX_CONV_MEDIO    = 6.0
+
 
 # ══════════════════════════════════════════════════════
 def sheet_url(t): return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={t}"
@@ -85,9 +85,9 @@ def load_hotmart():
     # Nome da coluna de data pode variar no CSV do Sheets
     date_col = next((c for c in df.columns if c.lower() in ["data","date","data de compra"]), df.columns[1])
     df["date"]=pd.to_datetime(df[date_col],errors="coerce")
-    # Nome da coluna de valor
+    # Nome da coluna de valor — usar to_num para detectar formato BR (29,9) ou US (29.9)
     valor_col = next((c for c in df.columns if "valor" in c.lower() and "bruto" in c.lower()), "Valor bruto")
-    df["valor"]=pd.to_numeric(df[valor_col],errors="coerce").fillna(0)
+    df["valor"]=to_num(df[valor_col])
     # Status
     status_col = next((c for c in df.columns if "status" in c.lower()), "Status")
     df=df[df[status_col].isin(["COMPLETE","APPROVED","complete","approved"])]
@@ -290,16 +290,25 @@ def meta_tables_period(df, p, img_dir, ticket):
                 "roas":round(rev/sp,2) if sp>0 else None,
                 "cpm":round(sp/imp*1000,2) if imp>0 else None})
         return rows
+    # Mapa de thumb: ad+adset+camp → url (do df completo, não só do período)
+    df_full_thumb=df[df["thumb"].notna()&(df["thumb"].astype(str)!="nan")]
+    thumb_map={}
+    for _,r in df_full_thumb.iterrows():
+        k=(str(r["ad"]),str(r["adset"]),str(r["campaign"]))
+        if k not in thumb_map:
+            thumb_map[k]=download_thumb(str(r["thumb"]),img_dir)
+
     def make_ads(sub):
-        df_t=sub[sub["thumb"].notna()&(sub["thumb"].astype(str)!="nan")].copy()
-        if df_t.empty: return []
-        agg=df_t.groupby(["ad","adset","campaign","thumb"]).agg(spend=("spend","sum"),impressions=("impressions","sum"),
+        # Agregar métricas do período, buscar thumb do mapa completo
+        agg=sub.groupby(["ad","adset","campaign"]).agg(spend=("spend","sum"),impressions=("impressions","sum"),
             link_clicks=("link_clicks","sum"),purchase=("purchase","sum")).reset_index().sort_values("purchase",ascending=False)
+        if agg.empty: return []
         ads=[]
         for _,r in agg.iterrows():
             sp=float(r["spend"]); imp=float(r["impressions"]); lc=float(r["link_clicks"]); pur=float(r["purchase"])
+            k=(str(r["ad"]),str(r["adset"]),str(r["campaign"]))
             ads.append({"n":str(r["ad"]),"adset":str(r["adset"]),"camp":str(r["campaign"]),
-                "thumb":download_thumb(str(r["thumb"]),img_dir),
+                "thumb":thumb_map.get(k,""),
                 "spend":round(sp,2),"pur":int(pur),"imp":int(imp),"lc":int(lc),
                 "ctr":round(lc/imp*100,2) if imp>0 else None,
                 "cpa":round(sp/pur,2) if pur>0 else None})
@@ -366,6 +375,21 @@ def meta_breakdowns(df):
             plat_d=seg(ag_pt,"platform")
         else: plat_d=[]
         result[pname]={"age":age_d,"gender":gen_d,"platform":plat_d}
+    # Também exportar raw por dia para filtro de datas livres
+    raw_ga=[]
+    if len(df_ga)>0:
+        for _,r in df_ga.iterrows():
+            if pd.isna(r['date']): continue
+            raw_ga.append({'d':r['date'].strftime('%d/%m'),'age':str(r['age']),'gen':str(r['gender']),
+                           'sp':round(float(r['spend']),2),'pur':int(r['purchase'])})
+    raw_pt=[]
+    if len(df_pt)>0:
+        for _,r in df_pt.iterrows():
+            if pd.isna(r['date']): continue
+            raw_pt.append({'d':r['date'].strftime('%d/%m'),'plat':str(r['platform']),
+                           'sp':round(float(r['spend']),2),'pur':int(r['purchase'])})
+    result['_raw_ga']=raw_ga
+    result['_raw_pt']=raw_pt
     return result
 
 # ══ PESQUISA ══════════════════════════════════════════
