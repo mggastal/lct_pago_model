@@ -44,6 +44,9 @@ TX_CK_MEDIO      = 23.0
 TX_CONV_BOM      = 8.0    # Taxa Conversão LP ≥ 8% → verde | 6-8% → amarelo | <5% → vermelho
 TX_CONV_MEDIO    = 6.0
 
+CPM_BOM          = 50.0    # CPM ≤ 5 → verde | 5-10 → amarelo | >10 → vermelho (menor = melhor)
+CPM_MEDIO        = 55.0
+
 # ══════════════════════════════════════════════════════
 def sheet_url(t): return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={t}"
 URL_META = sheet_url("meta-ads")
@@ -402,15 +405,16 @@ def load_pesquisa():
     print("  Lendo pesquisa..."); return pd.read_csv(URL_PES)
 
 def pesquisa_process(df, hot_qtd):
-    PERGUNTAS=["Você já trabalha como consultora de estilo?",
-               "Hoje, a Consultoria de Estilo é sua principal fonte de renda?",
-               "Qual é a sua faixa de renda mensal atualmente?",
-               "Qual a sua opinião sobre os métodos tradicionais?",
-               "Há quanto tempo você me conhece?",
-               "Você já ouviu falar do método Styletelling e da semiótica visual?",
-               "Qual é a sua maior dificuldade hoje na consultoria de estilo?",
-               "Qual é a sua idade?"]
+    # Perguntas dinâmicas: todas as colunas que NÃO são UTM nem de controle
     UTM_COLS=["utm_source","utm_medium","utm_campaign","utm_content"]
+    SKIP_COLS=set(UTM_COLS+["Carimbo de data/hora","Timestamp","Email","email",
+                             "Nome","nome","ID","id","Unnamed: 0"])
+    # Considerar como pergunta qualquer coluna com texto longo (provável questão)
+    PERGUNTAS=[c for c in df.columns
+               if c not in SKIP_COLS
+               and not c.lower().startswith("unnamed")
+               and pd.api.types.is_string_dtype(df[c])  # aceita str e object
+               and df[c].nunique() <= 50] # não é ID único por linha
     graficos=[]
     for p in PERGUNTAS:
         if p not in df.columns: continue
@@ -462,7 +466,13 @@ def inject_all(tpl, meta_k, meta_d, meta_dc, meta_raw_c, meta_t, meta_bd, hot_k,
     for k,v in [("LANCAMENTO_COD",f"'{LANCAMENTO_COD}'"),("NOME_CLIENTE",f"'{NOME_CLIENTE}'"),
                 ("LOGO_LETRA",f"'{LOGO_LETRA}'"),("COR_ACENTO",f"'{COR_ACENTO}'"),
                 ("CPA_BOM",str(CPA_BOM)),("CPA_MEDIO",str(CPA_MEDIO)),
-                ("ROAS_BOM",str(ROAS_BOM)),("ROAS_MEDIO",str(ROAS_MEDIO))]:
+                ("ROAS_BOM",str(ROAS_BOM)),("ROAS_MEDIO",str(ROAS_MEDIO)),
+                ("CTR_BOM",str(CTR_BOM)),("CTR_MEDIO",str(CTR_MEDIO)),
+                ("CR_BOM",str(CR_BOM)),("CR_MEDIO",str(CR_MEDIO)),
+                ("TX_IC_BOM",str(TX_IC_BOM)),("TX_IC_MEDIO",str(TX_IC_MEDIO)),
+                ("TX_CK_BOM",str(TX_CK_BOM)),("TX_CK_MEDIO",str(TX_CK_MEDIO)),
+                ("TX_CONV_BOM",str(TX_CONV_BOM)),("TX_CONV_MEDIO",str(TX_CONV_MEDIO)),
+                ("CPM_BOM",str(CPM_BOM)),("CPM_MEDIO",str(CPM_MEDIO))]:
         html=re.sub(rf"const {k}\s*=\s*[^;]+;",f"const {k}={v};",html,count=1)
     html=re.sub(r"\d{2}/\d{2}/\d{4} · via planilha",date.today().strftime("%d/%m/%Y")+" · via planilha",html)
     return html
