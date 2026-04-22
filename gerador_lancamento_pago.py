@@ -13,7 +13,7 @@ SHEET_ID         = "18ugpwn3aqeWg-pCFLHLKXjyN1QfndQw9x9JCCIoPB2M"
 TEMPLATE_FILE    = "dashboard_lancamento_pago.html"
 OUTPUT_FILE      = "index.html"
 
-NOME_CLIENTE     = "Little Monstar"
+NOME_CLIENTE     = "Little Monster"
 LOGO_LETRA       = "LM"
 COR_ACENTO       = "#e11d48"
 
@@ -21,10 +21,10 @@ LANCAMENTO_COD   = "LDabr26"        # filtra campanhas; "" = ver tudo
 USAR_PESQUISA    = False
 PRODUTOS_HOTMART = ["Little Dates"]              # ex: ["Semana Pensar Estilo"]; [] = todos
 
-CPA_BOM          = 50
-CPA_MEDIO        = 80
-ROAS_BOM         = 1.0
-ROAS_MEDIO       = 0.6
+CPA_BOM          = 130
+CPA_MEDIO        = 160
+ROAS_BOM         = 1.3
+ROAS_MEDIO       = 0.9
 
 # Metas do funil — define cores (verde/amarelo/vermelho) nas taxas
 # Cada métrica: [valor_bom, valor_medio] — acima do bom = verde, entre = amarelo, abaixo = vermelho
