@@ -78,7 +78,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .f-step{display:flex;flex-direction:column;}
 .f-bar{height:40px;border-radius:7px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;transition:width .4s;min-width:80px;}
 .f-bar-lbl{font-size:12px;font-weight:600;color:#fff;}
-.f-bar.narrow .f-bar-lbl,.f-bar.narrow .f-bar-val{color:#111;}
+.f-bar.narrow .f-bar-lbl,.f-bar.narrow .f-bar-val{color:#fff;}
 .f-bar-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:#fff;}
 .f-between{display:flex;align-items:center;gap:8px;padding:4px 0 4px 12px;}
 .f-arrow{color:var(--muted2);font-size:14px;}
@@ -510,6 +510,8 @@ function buildFunnel(mk){
 
   const maxOther=Math.max(mk.link_clicks||1,mk.page_view||1,mk.init_checkout||1,mk.purchase||1,1);
   const widths=steps.map((s,i)=>i===0?100:Math.max(16,Math.round((s.val||0)/maxOther*88)));
+  // Garantir que Compras (idx 4) seja visualmente menor que Init Checkout (idx 3)
+  if(widths[4]>=widths[3]) widths[4]=Math.max(16,widths[3]-6);
 
   const el=document.getElementById('funnelSteps');
   let html='';
