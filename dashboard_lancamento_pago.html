@@ -868,12 +868,14 @@ function calcTableFromRaw(){
 let _calcRawRunning=false;
 function getMT(){
   const key=getPeriodKey();
-  if(key){
+  // Para "ontem" (key='1') sempre usar raw — os dados pré-calculados podem incluir hoje
+  // Para datas livres também usa raw
+  if(key && key!=='1'){
     const base=filtroLct?META_TABLES?.lct:META_TABLES?.all;
     if(!base) return null;
     return base[key]||base['all']||null;
   }
-  // Datas livres: calcular do raw (sem recursão)
+  // Ontem ou datas livres: calcular do raw (sem recursão)
   if(_calcRawRunning) return ((filtroLct?META_TABLES?.lct:META_TABLES?.all)||{})['all']||null;
   _calcRawRunning=true;
   const result=calcTableFromRaw();
@@ -908,18 +910,21 @@ function filterBdRaw(rawArr, keyFn, dims){
 
 function getMBD(){
   if(!META_BD) return null;
-  const key=getPeriodKey();
-  if(key) return META_BD[key]||META_BD['all']||null;
-  // Datas livres: calcular do raw se disponível
   const rawGa=META_BD._raw_ga;
   const rawPt=META_BD._raw_pt;
-  if(!rawGa&&!rawPt) return META_BD['all']||null;
   const AGE_ORDER=["18-24","25-34","35-44","45-54","55-64","65+"];
-  const age=filterBdRaw(rawGa,r=>r.age).filter(v=>AGE_ORDER.includes(v.n))
-    .sort((a,b)=>AGE_ORDER.indexOf(a.n)-AGE_ORDER.indexOf(b.n));
-  const gender=filterBdRaw(rawGa,r=>r.gen).filter(v=>['female','male'].includes(v.n));
-  const platform=filterBdRaw(rawPt,r=>r.plat).slice(0,8);
-  return {age,gender,platform};
+  const key=getPeriodKey();
+  // Para "ontem" ou datas livres: sempre usar raw (garante lógica ontem=hoje-1)
+  if(!key || key==='1'){
+    if(!rawGa&&!rawPt) return META_BD[key||'all']||META_BD['all']||null;
+    const age=filterBdRaw(rawGa,r=>r.age).filter(v=>AGE_ORDER.includes(v.n))
+      .sort((a,b)=>AGE_ORDER.indexOf(a.n)-AGE_ORDER.indexOf(b.n));
+    const gender=filterBdRaw(rawGa,r=>r.gen).filter(v=>['female','male'].includes(v.n));
+    const platform=filterBdRaw(rawPt,r=>r.plat).slice(0,8);
+    return {age,gender,platform};
+  }
+  // Períodos fixos: pré-calculado
+  return META_BD[key]||META_BD['all']||null;
 }
 
 function buildTable(elId,data,mainCol){
