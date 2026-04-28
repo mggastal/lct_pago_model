@@ -327,11 +327,22 @@ def meta_tables(df, img_dir, ticket):
     """Exporta tabelas por período: 1d,7d,14d,30d,all — baseado na data de geração"""
     from datetime import timezone, timedelta
     hoje=pd.Timestamp(date.today())  # data de geração como referência
+    ontem=hoje-pd.Timedelta(days=1)  # ontem = hoje - 1
     result={"lct":{},"all":{}}
-    periods={"1":1,"7":7,"14":14,"30":30,"all":0}
+    # Período "1" = ontem (só esse dia), demais = últimos N dias incluindo hoje
+    period_ranges={
+        "1":  (ontem, ontem),
+        "7":  (hoje-pd.Timedelta(days=6), hoje),
+        "14": (hoje-pd.Timedelta(days=13), hoje),
+        "30": (hoje-pd.Timedelta(days=29), hoje),
+        "all": (None, None),
+    }
     for key,subset in [("lct",df[df["is_lct"]]),("all",df)]:
-        for pname,n in periods.items():
-            p=subset[subset["date"]>=hoje-pd.Timedelta(days=n-1)] if n>0 else subset
+        for pname,(start,end) in period_ranges.items():
+            if start is None:
+                p=subset
+            else:
+                p=subset[(subset["date"]>=start)&(subset["date"]<=end)]
             result[key][pname]=meta_tables_period(df,p,img_dir,ticket)
             print(f"     [{key}][{pname}]: {len(result[key][pname]['camps'])} camps")
     return result
